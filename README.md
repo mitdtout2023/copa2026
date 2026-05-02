@@ -125,3 +125,17 @@ Na aba **Álbum**, use o campo **Buscar país** para localizar rapidamente pelo 
 ## Atualização de título
 - Texto principal do cabeçalho atualizado para **Copa 2026**.
 - Metadados do PWA atualizados para **Copa 2026**.
+
+
+## Atualização: remoção com senha e PDF A4
+- Adicionado botão **Remover figurinha** na aba Álbum.
+- A remoção exige a senha `talita10`.
+- Enquanto o modo remover estiver ativo, tocar em uma figurinha subtrai 1 unidade.
+- Remoção de repetidas, limpeza de país e limpeza geral também exigem senha.
+- Exportação em PDF atualizada para formato A4.
+- PDF contém bandeira, nome do país e figurinhas de 01 a 20, exemplo: `BRA 01` até `BRA 20`.
+
+
+## Atualização visual
+- Removido o card **Repetidas extras** da tela principal.
+- Incluído o ícone `apple-touch-icon.png` ao lado do título **Copa 2026**.

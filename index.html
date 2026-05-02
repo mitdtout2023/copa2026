@@ -22,7 +22,10 @@
   <header class="app-header">
     <div>
       <p class="eyebrow">Controle local</p>
-      <h1>Copa 2026</h1>
+      <div class="app-title-row">
+        <img src="apple-touch-icon.png" alt="Ícone Copa 2026" class="app-title-icon" />
+        <h1>Copa 2026</h1>
+      </div>
       <p class="subtitle">Álbum, faltantes, repetidas e importação por texto.</p>
     </div>
     <button id="installButton" class="ghost hidden">Instalar</button>
@@ -42,10 +45,6 @@
         <span>Tipos repetidos</span>
         <strong id="duplicateTypesCount">0</strong>
       </article>
-      <article class="summary-card">
-        <span>Repetidas extras</span>
-        <strong id="duplicateExtrasCount">0</strong>
-      </article>
     </section>
 
     <nav class="tabs" aria-label="Seções do aplicativo">
@@ -64,8 +63,9 @@
         </label>
         <div class="tap-help">
           <strong>Toque na figurinha para adicionar +1.</strong>
-          <span>Se ela já estiver no álbum, o toque soma como repetida. Para remover repetidas, use o menu Repetidas.</span>
+          <span id="tapHelpText">Se ela já estiver no álbum, o toque soma como repetida. Para remover do álbum, use o botão Remover figurinha com senha.</span>
         </div>
+        <button id="toggleRemoveMode" class="ghost">Remover figurinha</button>
         <button id="resetVisibleCountry" class="ghost">Limpar país</button>
       </div>
 

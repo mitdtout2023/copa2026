@@ -97,7 +97,7 @@ main {
 
 .summary-grid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 12px;
   margin-top: -34px;
   margin-bottom: 16px;
@@ -162,7 +162,7 @@ main {
 
 .toolbar {
   display: grid;
-  grid-template-columns: 1fr 1fr auto;
+  grid-template-columns: 1fr 1.2fr auto auto;
   gap: 12px;
   align-items: end;
 }
@@ -508,4 +508,68 @@ button.pill {
 .sticker.duplicate {
   background: #fdba74;
   border-color: #ea580c;
+}
+
+.remove-active {
+  box-shadow: 0 0 0 3px rgba(185, 28, 28, .18);
+}
+
+.toolbar .danger {
+  background: #b91c1c;
+  color: #ffffff;
+}
+
+.app-title-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.app-title-icon {
+  width: 54px;
+  height: 54px;
+  border-radius: 14px;
+  background: #ffffff;
+  object-fit: cover;
+  flex: 0 0 auto;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, .22);
+}
+
+.app-title-row h1 {
+  margin-bottom: 0;
+}
+
+@media (max-width: 720px) {
+  .summary-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .summary-card {
+    padding: 13px;
+  }
+
+  .summary-card strong {
+    font-size: 28px;
+  }
+
+  .app-title-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+  }
+}
+
+@media (max-width: 430px) {
+  .summary-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .summary-card span {
+    font-size: 12px;
+  }
+
+  .summary-card strong {
+    font-size: 24px;
+  }
 }

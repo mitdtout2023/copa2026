@@ -56,12 +56,14 @@ function getCountryLabel(country, includeCode = true) {
 
 const TOTAL_STICKERS = COUNTRIES.length * STICKERS_PER_COUNTRY;
 const STORAGE_KEY = "figurinhas-copa-2026-state-v2";
+const REMOVE_PASSWORD = "talita10";
 const LEGACY_STORAGE_KEY = "figurinhas-copa-2026-state-v1";
 
 let state = createEmptyState();
 let parsedItems = [];
 let lastComparison = [];
 let deferredInstallPrompt = null;
+let removeModeActive = false;
 
 const $ = (id) => document.getElementById(id);
 
@@ -152,6 +154,7 @@ function setupCountryFilter() {
 
 function setupEvents() {
   $("countryFilter").addEventListener("change", renderAlbum);
+  $("toggleRemoveMode").addEventListener("click", toggleRemoveMode);
   $("resetVisibleCountry").addEventListener("click", resetVisibleCountry);
   $("copyMissing").addEventListener("click", () => copyText(buildMissingText()));
   $("copyDuplicates").addEventListener("click", () => copyText(buildDuplicatesText()));
@@ -190,7 +193,47 @@ function setupServiceWorker() {
   }
 }
 
+
+function requireRemovePassword(actionLabel = "remover figurinhas") {
+  const password = prompt(`Digite a senha para ${actionLabel}:`);
+  if (password === null) return false;
+  if (password !== REMOVE_PASSWORD) {
+    alert("Senha incorreta.");
+    return false;
+  }
+  return true;
+}
+
+function toggleRemoveMode() {
+  if (!removeModeActive && !requireRemovePassword("ativar o modo de remoção")) return;
+
+  removeModeActive = !removeModeActive;
+  renderRemoveModeUi();
+  renderAlbum();
+}
+
+function renderRemoveModeUi() {
+  const button = $("toggleRemoveMode");
+  const help = $("tapHelpText");
+
+  if (!button || !help) return;
+
+  if (removeModeActive) {
+    button.textContent = "Modo remover ativo";
+    button.classList.add("danger", "remove-active");
+    button.classList.remove("ghost");
+    help.textContent = "Modo remover ativo: toque em uma figurinha para subtrair 1 unidade do álbum.";
+  } else {
+    button.textContent = "Remover figurinha";
+    button.classList.remove("danger", "remove-active");
+    button.classList.add("ghost");
+    help.textContent = "Se ela já estiver no álbum, o toque soma como repetida. Para remover do álbum, use o botão Remover figurinha com senha.";
+  }
+}
+
+
 function renderAll() {
+  renderRemoveModeUi();
   renderSummary();
   renderAlbum();
   renderMissing();
@@ -224,7 +267,7 @@ function renderSummary() {
   $("ownedCount").textContent = summary.ownedTypes;
   $("missingCount").textContent = summary.missing;
   $("duplicateTypesCount").textContent = summary.duplicateTypes;
-  $("duplicateExtrasCount").textContent = summary.duplicateExtras;
+  if ($("duplicateExtrasCount")) $("duplicateExtrasCount").textContent = summary.duplicateExtras;
 }
 
 function renderAlbum() {
@@ -291,12 +334,26 @@ function countDuplicateExtrasByCountry(country) {
 
 function updateStickerFromTap(country, number) {
   const current = state.inventory[country][number];
+
+  if (removeModeActive) {
+    if (current <= 0) {
+      alert(`${country} ${String(number).padStart(2, "0")} já está zerada.`);
+      return;
+    }
+
+    state.inventory[country][number] = current - 1;
+    saveState();
+    renderAll();
+    return;
+  }
+
   state.inventory[country][number] = current + 1;
   saveState();
   renderAll();
 }
 
 function removeDuplicateExtra(country, number) {
+  if (!requireRemovePassword(`remover uma repetida de ${country} ${String(number).padStart(2, "0")}`)) return;
   const current = state.inventory[country][number];
   if (current <= 1) return;
   state.inventory[country][number] = current - 1;
@@ -312,6 +369,7 @@ function resetVisibleCountry() {
     return;
   }
 
+  if (!requireRemovePassword(`limpar o país ${getCountryLabel(selected)}`)) return;
   if (!confirm(`Limpar todas as figurinhas de ${getCountryLabel(selected)}?`)) return;
   for (let number = 1; number <= STICKERS_PER_COUNTRY; number++) {
     state.inventory[selected][number] = 0;
@@ -634,23 +692,242 @@ async function importJson(event) {
   }
 }
 
-function exportPdfReport() {
-  const lines = buildPdfReportLines();
-  const pdf = createPdfFromLines(lines, {
-    title: "Figurinhas Copa 2026",
-    subtitle: `Relatorio gerado em ${new Date().toLocaleString("pt-BR")}`
-  });
 
-  const blob = new Blob([pdf], { type: "application/pdf" });
+async function exportPdfReport() {
+  const pdfBytes = await createA4StickerReportPdf();
+  const blob = new Blob([pdfBytes], { type: "application/pdf" });
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
-  a.download = `figurinhas-copa-2026-relatorio-${new Date().toISOString().slice(0, 10)}.pdf`;
+  a.download = `copa-2026-relatorio-a4-${new Date().toISOString().slice(0, 10)}.pdf`;
   document.body.appendChild(a);
   a.click();
   a.remove();
   URL.revokeObjectURL(url);
 }
+
+async function createA4StickerReportPdf() {
+  const pageWidthPt = 595.28;
+  const pageHeightPt = 841.89;
+  const canvasWidth = 1240;
+  const canvasHeight = 1754;
+  const margin = 48;
+  const rowHeight = 38;
+  const headerHeight = 118;
+  const footerHeight = 44;
+  const usableHeight = canvasHeight - headerHeight - footerHeight;
+  const rowsPerPage = Math.floor(usableHeight / rowHeight);
+
+  const pages = [];
+  for (let i = 0; i < COUNTRIES.length; i += rowsPerPage) {
+    pages.push(COUNTRIES.slice(i, i + rowsPerPage));
+  }
+
+  const pageImages = [];
+  for (let pageIndex = 0; pageIndex < pages.length; pageIndex++) {
+    const canvas = document.createElement("canvas");
+    canvas.width = canvasWidth;
+    canvas.height = canvasHeight;
+    const ctx = canvas.getContext("2d");
+
+    ctx.fillStyle = "#ffffff";
+    ctx.fillRect(0, 0, canvasWidth, canvasHeight);
+
+    drawPdfHeader(ctx, canvasWidth, margin, pageIndex + 1, pages.length);
+    drawPdfTable(ctx, pages[pageIndex], margin, headerHeight, canvasWidth - margin * 2, rowHeight);
+    drawPdfFooter(ctx, canvasWidth, canvasHeight, margin);
+
+    const jpegDataUrl = canvas.toDataURL("image/jpeg", 0.92);
+    const jpegBytes = dataUrlToBytes(jpegDataUrl);
+    pageImages.push({ bytes: jpegBytes, width: canvasWidth, height: canvasHeight });
+  }
+
+  return createPdfFromJpegs(pageImages, pageWidthPt, pageHeightPt);
+}
+
+function drawPdfHeader(ctx, canvasWidth, margin, pageNumber, totalPages) {
+  const summary = getSummary();
+
+  ctx.fillStyle = "#0f172a";
+  ctx.font = "700 34px Arial, sans-serif";
+  ctx.fillText("Copa 2026 - Controle de Figurinhas", margin, 52);
+
+  ctx.fillStyle = "#475569";
+  ctx.font = "20px Arial, sans-serif";
+  ctx.fillText(`Gerado em ${new Date().toLocaleString("pt-BR")}`, margin, 84);
+
+  ctx.textAlign = "right";
+  ctx.fillText(`Página ${pageNumber} de ${totalPages}`, canvasWidth - margin, 52);
+  ctx.fillText(`Álbum ${summary.ownedTypes}/${TOTAL_STICKERS} | Faltantes ${summary.missing} | Repetidas extras ${summary.duplicateExtras}`, canvasWidth - margin, 84);
+  ctx.textAlign = "left";
+}
+
+function drawPdfTable(ctx, countries, margin, startY, tableWidth, rowHeight) {
+  const flagW = 70;
+  const countryW = 230;
+  const stickersW = tableWidth - flagW - countryW;
+
+  ctx.strokeStyle = "#cbd5e1";
+  ctx.lineWidth = 1;
+
+  ctx.fillStyle = "#e2e8f0";
+  ctx.fillRect(margin, startY, tableWidth, rowHeight);
+
+  ctx.fillStyle = "#0f172a";
+  ctx.font = "700 18px Arial, sans-serif";
+  ctx.fillText("Bandeira", margin + 12, startY + 25);
+  ctx.fillText("País", margin + flagW + 12, startY + 25);
+  ctx.fillText("Figurinhas 01 a 20", margin + flagW + countryW + 12, startY + 25);
+
+  drawTableLine(ctx, margin, startY, tableWidth, rowHeight);
+
+  const codeWidth = stickersW / STICKERS_PER_COUNTRY;
+  let y = startY + rowHeight;
+
+  for (const country of countries) {
+    const meta = getCountryMeta(country);
+    const rowFill = Math.round((y - startY) / rowHeight) % 2 === 0 ? "#ffffff" : "#f8fafc";
+    ctx.fillStyle = rowFill;
+    ctx.fillRect(margin, y, tableWidth, rowHeight);
+
+    ctx.font = "24px Arial, Apple Color Emoji, Segoe UI Emoji, sans-serif";
+    ctx.fillStyle = "#0f172a";
+    ctx.fillText(meta.flag, margin + 18, y + 27);
+
+    ctx.font = "700 16px Arial, sans-serif";
+    ctx.fillText(meta.name, margin + flagW + 12, y + 17);
+    ctx.font = "12px Arial, sans-serif";
+    ctx.fillStyle = "#64748b";
+    ctx.fillText(country, margin + flagW + 12, y + 31);
+
+    for (let number = 1; number <= STICKERS_PER_COUNTRY; number++) {
+      const qty = state.inventory[country][number];
+      const x = margin + flagW + countryW + (number - 1) * codeWidth;
+      const code = `${country} ${String(number).padStart(2, "0")}`;
+
+      ctx.fillStyle = qty === 0 ? "#fee2e2" : qty === 1 ? "#dcfce7" : "#fed7aa";
+      ctx.fillRect(x + 2, y + 5, codeWidth - 4, rowHeight - 10);
+
+      ctx.strokeStyle = qty === 0 ? "#ef4444" : qty === 1 ? "#22c55e" : "#ea580c";
+      ctx.strokeRect(x + 2, y + 5, codeWidth - 4, rowHeight - 10);
+
+      ctx.fillStyle = "#0f172a";
+      ctx.font = "9px Arial, sans-serif";
+      ctx.textAlign = "center";
+      ctx.fillText(code, x + codeWidth / 2, y + 21);
+
+      ctx.fillStyle = "#334155";
+      ctx.font = "8px Arial, sans-serif";
+      ctx.fillText(`qtd ${qty}`, x + codeWidth / 2, y + 32);
+      ctx.textAlign = "left";
+    }
+
+    drawTableLine(ctx, margin, y, tableWidth, rowHeight);
+    y += rowHeight;
+  }
+
+  ctx.strokeStyle = "#cbd5e1";
+  ctx.beginPath();
+  ctx.moveTo(margin + flagW, startY);
+  ctx.lineTo(margin + flagW, y);
+  ctx.moveTo(margin + flagW + countryW, startY);
+  ctx.lineTo(margin + flagW + countryW, y);
+  ctx.stroke();
+}
+
+function drawTableLine(ctx, x, y, width, height) {
+  ctx.strokeStyle = "#cbd5e1";
+  ctx.strokeRect(x, y, width, height);
+}
+
+function drawPdfFooter(ctx, canvasWidth, canvasHeight, margin) {
+  ctx.fillStyle = "#64748b";
+  ctx.font = "16px Arial, sans-serif";
+  ctx.fillText("Legenda: vermelho = faltante | verde = tenho | laranja = repetida", margin, canvasHeight - 28);
+
+  ctx.textAlign = "right";
+  ctx.font = "700 16px Arial, sans-serif";
+  ctx.fillText("criado por Marcelo Ferreira", canvasWidth - margin, canvasHeight - 28);
+  ctx.textAlign = "left";
+}
+
+function dataUrlToBytes(dataUrl) {
+  const base64 = dataUrl.split(",")[1];
+  const binary = atob(base64);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) {
+    bytes[i] = binary.charCodeAt(i);
+  }
+  return bytes;
+}
+
+function createPdfFromJpegs(images, pageWidth, pageHeight) {
+  const objects = [null];
+  const addObject = (value) => {
+    objects.push(value);
+    return objects.length - 1;
+  };
+
+  addObject("");
+  addObject("");
+
+  const pageRefs = [];
+
+  images.forEach((image, index) => {
+    const imgRef = addObject(`<< /Type /XObject /Subtype /Image /Width ${image.width} /Height ${image.height} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length ${image.bytes.length} >>\nstream\n${bytesToBinaryString(image.bytes)}\nendstream`);
+    const content = `q\n${pageWidth} 0 0 ${pageHeight} 0 0 cm\n/Im${index + 1} Do\nQ`;
+    const contentRef = addObject(`<< /Length ${content.length} >>\nstream\n${content}\nendstream`);
+    const pageRef = addObject(`<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${pageWidth} ${pageHeight}] /Resources << /XObject << /Im${index + 1} ${imgRef} 0 R >> >> >> /Contents ${contentRef} 0 R >>`);
+    pageRefs.push(pageRef);
+  });
+
+  objects[1] = "<< /Type /Catalog /Pages 2 0 R >>";
+  objects[2] = `<< /Type /Pages /Kids [${pageRefs.map((ref) => `${ref} 0 R`).join(" ")}] /Count ${pageRefs.length} >>`;
+
+  let pdf = "%PDF-1.4\n";
+  const offsets = [0];
+
+  for (let index = 1; index < objects.length; index++) {
+    offsets[index] = byteLength(pdf);
+    pdf += `${index} 0 obj\n${objects[index]}\nendobj\n`;
+  }
+
+  const xrefOffset = byteLength(pdf);
+  pdf += `xref\n0 ${objects.length}\n`;
+  pdf += "0000000000 65535 f \n";
+  for (let index = 1; index < objects.length; index++) {
+    pdf += `${String(offsets[index]).padStart(10, "0")} 00000 n \n`;
+  }
+  pdf += `trailer\n<< /Size ${objects.length} /Root 1 0 R >>\nstartxref\n${xrefOffset}\n%%EOF`;
+
+  return binaryStringToUint8Array(pdf);
+}
+
+function bytesToBinaryString(bytes) {
+  let result = "";
+  const chunkSize = 8192;
+  for (let i = 0; i < bytes.length; i += chunkSize) {
+    result += String.fromCharCode(...bytes.slice(i, i + chunkSize));
+  }
+  return result;
+}
+
+function binaryStringToUint8Array(binary) {
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) {
+    bytes[i] = binary.charCodeAt(i) & 0xff;
+  }
+  return bytes;
+}
+
+function byteLength(text) {
+  let count = 0;
+  for (let i = 0; i < text.length; i++) {
+    count += text.charCodeAt(i) > 255 ? 2 : 1;
+  }
+  return count;
+}
+
 
 function buildPdfReportLines() {
   const summary = getSummary();
@@ -798,6 +1075,7 @@ function wrapPdfLine(line, maxChars) {
 }
 
 function resetAll() {
+  if (!requireRemovePassword("limpar todo o álbum")) return;
   if (!confirm("Deseja apagar todas as marcações do álbum?")) return;
   state = createEmptyState();
   saveState();
