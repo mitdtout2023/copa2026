@@ -1,4 +1,4 @@
-const CACHE_NAME = "figurinhas-copa-2026-v10-corrigir-cores-icones";
+const CACHE_NAME = "figurinhas-copa-2026-v11-copa-2026-title";
 const APP_SHELL = [
   "./",
   "./index.html",

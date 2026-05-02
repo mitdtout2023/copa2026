@@ -120,3 +120,8 @@ Na aba **Álbum**, use o campo **Buscar país** para localizar rapidamente pelo 
 - Ícone **faltante** corrigido para vermelho sólido.
 - Ícone **tenho** corrigido para verde sólido.
 - Ícone **repetida** corrigido para laranja escuro sólido.
+
+
+## Atualização de título
+- Texto principal do cabeçalho atualizado para **Copa 2026**.
+- Metadados do PWA atualizados para **Copa 2026**.
