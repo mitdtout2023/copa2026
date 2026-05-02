@@ -47,7 +47,7 @@
       <button class="tab" data-tab="missing">Faltantes</button>
       <button class="tab" data-tab="duplicates">Repetidas</button>
       <button class="tab" data-tab="ai">ChatGPT / IA</button>
-      <button class="tab" data-tab="settings">Backup</button>
+      <button class="tab" data-tab="settings">Backup / PDF</button>
     </nav>
 
     <section id="album" class="tab-panel active">
@@ -56,14 +56,10 @@
           País
           <select id="countryFilter"></select>
         </label>
-        <label>
-          Modo de toque
-          <select id="tapMode">
-            <option value="increment">Adicionar +1</option>
-            <option value="decrement">Remover -1</option>
-            <option value="toggle">Alternar 0/1</option>
-          </select>
-        </label>
+        <div class="tap-help">
+          <strong>Toque na figurinha para adicionar +1.</strong>
+          <span>Se ela já estiver no álbum, o toque soma como repetida. Para remover repetidas, use o menu Repetidas.</span>
+        </div>
         <button id="resetVisibleCountry" class="ghost">Limpar país</button>
       </div>
 
@@ -91,7 +87,7 @@
       <div class="section-header">
         <div>
           <h2>Figurinhas repetidas</h2>
-          <p>Mostra figurinhas com quantidade maior que 1.</p>
+          <p>Mostra figurinhas com quantidade maior que 1. Toque em uma repetida para remover apenas uma cópia extra.</p>
         </div>
         <button id="copyDuplicates" class="ghost">Copiar lista</button>
       </div>
@@ -128,30 +124,35 @@
           <h3>2. Foto ou texto</h3>
           <label>
             Foto das figurinhas
-            <input id="imageInput" type="file" accept="image/*" multiple />
+            <input id="imageInput" type="file" accept="image/*" capture="environment" multiple />
           </label>
+          <p class="help-text">Ao enviar uma foto, o app procura códigos como <strong>BRA 12</strong>, compara com o álbum e atualiza as quantidades.</p>
           <label>
             Lista manual ou texto livre
             <textarea id="manualText" rows="7" placeholder="Ex.: ARG 1, 4, 7, 8, 11, 17, 20&#10;BRA 18&#10;AUS 8, AUS 13, AUS 13"></textarea>
           </label>
+          <label class="inline-check">
+            <input id="autoApply" type="checkbox" checked />
+            Atualizar álbum automaticamente após a leitura
+          </label>
           <div class="button-row">
-            <button id="parseManual" class="primary">Ler texto localmente</button>
-            <button id="analyzeAI" class="primary">Analisar com ChatGPT</button>
+            <button id="parseManual" class="primary">Ler texto e atualizar</button>
+            <button id="analyzeAI" class="primary">Ler foto com ChatGPT e atualizar</button>
           </div>
         </article>
 
         <article class="form-card">
-          <h3>3. Aplicar resultado</h3>
+          <h3>3. Resultado da leitura</h3>
           <label>
-            Como aplicar
+            Como atualizar
             <select id="applyMode">
-              <option value="add">Adicionar quantidades identificadas</option>
-              <option value="setDetected">Marcar identificadas como tenho/repetidas</option>
-              <option value="replace">Substituir álbum pelo resultado</option>
+              <option value="add">Adicionar as figurinhas lidas à quantidade atual</option>
+              <option value="setDetected">Definir quantidade igual à leitura</option>
+              <option value="replace">Substituir álbum pelo resultado da leitura</option>
             </select>
           </label>
           <div class="button-row">
-            <button id="applyParsed" class="primary" disabled>Aplicar ao álbum</button>
+            <button id="applyParsed" class="primary" disabled>Aplicar resultado novamente</button>
             <button id="clearParsed" class="ghost">Limpar resultado</button>
           </div>
           <pre id="aiResult" class="result-box" aria-live="polite">Nenhum resultado analisado ainda.</pre>
@@ -163,7 +164,7 @@
       <div class="section-header">
         <div>
           <h2>Backup e manutenção</h2>
-          <p>Exporte/importe os dados locais do navegador.</p>
+          <p>Exporte/importe os dados locais do navegador e gere relatório em PDF.</p>
         </div>
       </div>
 
@@ -172,11 +173,13 @@
           <h3>Backup</h3>
           <div class="button-row">
             <button id="exportJson" class="primary">Exportar JSON</button>
+            <button id="exportPdf" class="primary">Exportar PDF</button>
             <label class="file-button">
               Importar JSON
               <input id="importJson" type="file" accept="application/json" />
             </label>
           </div>
+          <p class="help-text">O PDF contém a quantidade por país, total físico, repetidas extras e as figurinhas faltantes.</p>
         </article>
 
         <article class="form-card danger-zone">

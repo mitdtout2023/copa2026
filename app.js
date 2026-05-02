@@ -4,12 +4,16 @@ const COUNTRIES = [
   "KSA", "MAR", "MEX", "NED", "NOR", "PAN", "POR", "QAT", "RSA", "SCO",
   "SEN", "SUI", "TUN", "URU", "USA", "UZB"
 ];
+
 const STICKERS_PER_COUNTRY = 20;
-const STORAGE_KEY = "figurinhas-copa-2026-state-v1";
+const TOTAL_STICKERS = COUNTRIES.length * STICKERS_PER_COUNTRY;
+const STORAGE_KEY = "figurinhas-copa-2026-state-v2";
+const LEGACY_STORAGE_KEY = "figurinhas-copa-2026-state-v1";
 const API_KEY_STORAGE = "figurinhas-openai-api-key";
 
 let state = createEmptyState();
 let parsedItems = [];
+let lastComparison = [];
 let deferredInstallPrompt = null;
 
 const $ = (id) => document.getElementById(id);
@@ -31,7 +35,7 @@ function createEmptyState() {
 
 function loadState() {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
+    const raw = localStorage.getItem(STORAGE_KEY) || localStorage.getItem(LEGACY_STORAGE_KEY);
     if (!raw) return;
     const saved = JSON.parse(raw);
     const fresh = createEmptyState();
@@ -104,15 +108,15 @@ function setupCountryFilter() {
 
 function setupEvents() {
   $("countryFilter").addEventListener("change", renderAlbum);
-  $("tapMode").addEventListener("change", renderAlbum);
   $("resetVisibleCountry").addEventListener("click", resetVisibleCountry);
   $("copyMissing").addEventListener("click", () => copyText(buildMissingText()));
   $("copyDuplicates").addEventListener("click", () => copyText(buildDuplicatesText()));
   $("parseManual").addEventListener("click", parseManualText);
   $("analyzeAI").addEventListener("click", analyzeWithOpenAI);
-  $("applyParsed").addEventListener("click", applyParsedItems);
+  $("applyParsed").addEventListener("click", () => applyParsedItems({ silent: false, allowRepeat: true }));
   $("clearParsed").addEventListener("click", clearParsed);
   $("exportJson").addEventListener("click", exportJson);
+  $("exportPdf").addEventListener("click", exportPdfReport);
   $("importJson").addEventListener("change", importJson);
   $("resetAll").addEventListener("click", resetAll);
   $("modelName").addEventListener("change", saveState);
@@ -157,10 +161,12 @@ function getSummary() {
   let missing = 0;
   let duplicateTypes = 0;
   let duplicateExtras = 0;
+  let physicalTotal = 0;
 
   for (const country of COUNTRIES) {
     for (let number = 1; number <= STICKERS_PER_COUNTRY; number++) {
       const qty = state.inventory[country][number];
+      physicalTotal += qty;
       if (qty === 0) missing += 1;
       if (qty >= 1) ownedTypes += 1;
       if (qty > 1) {
@@ -169,7 +175,7 @@ function getSummary() {
       }
     }
   }
-  return { ownedTypes, missing, duplicateTypes, duplicateExtras };
+  return { ownedTypes, missing, duplicateTypes, duplicateExtras, physicalTotal };
 }
 
 function renderSummary() {
@@ -192,9 +198,10 @@ function renderAlbum() {
 
     const owned = countOwnedByCountry(country);
     const dup = countDuplicateExtrasByCountry(country);
+    const physical = countPhysicalByCountry(country);
 
     const header = document.createElement("header");
-    header.innerHTML = `<h3>${country}</h3><span class="country-stats">${owned}/${STICKERS_PER_COUNTRY} no álbum • ${dup} extras</span>`;
+    header.innerHTML = `<h3>${country}</h3><span class="country-stats">${owned}/${STICKERS_PER_COUNTRY} no álbum • ${physical} total • ${dup} extras</span>`;
 
     const grid = document.createElement("div");
     grid.className = "sticker-grid";
@@ -224,6 +231,14 @@ function countOwnedByCountry(country) {
   return count;
 }
 
+function countPhysicalByCountry(country) {
+  let count = 0;
+  for (let number = 1; number <= STICKERS_PER_COUNTRY; number++) {
+    count += state.inventory[country][number];
+  }
+  return count;
+}
+
 function countDuplicateExtrasByCountry(country) {
   let count = 0;
   for (let number = 1; number <= STICKERS_PER_COUNTRY; number++) {
@@ -234,15 +249,16 @@ function countDuplicateExtrasByCountry(country) {
 }
 
 function updateStickerFromTap(country, number) {
-  const mode = $("tapMode").value;
   const current = state.inventory[country][number];
-  if (mode === "increment") {
-    state.inventory[country][number] = current + 1;
-  } else if (mode === "decrement") {
-    state.inventory[country][number] = Math.max(0, current - 1);
-  } else {
-    state.inventory[country][number] = current > 0 ? 0 : 1;
-  }
+  state.inventory[country][number] = current + 1;
+  saveState();
+  renderAll();
+}
+
+function removeDuplicateExtra(country, number) {
+  const current = state.inventory[country][number];
+  if (current <= 1) return;
+  state.inventory[country][number] = current - 1;
   saveState();
   renderAll();
 }
@@ -308,10 +324,34 @@ function renderGroupedList(container, map, emptyText, duplicates = false) {
   for (const [country, values] of entries) {
     const card = document.createElement("article");
     card.className = "list-card";
-    const pills = duplicates
-      ? values.map((item) => `<span class="pill">${country} ${item.number} • qtd. ${item.qty} • sobra ${item.extra}</span>`).join("")
-      : values.map((number) => `<span class="pill">${country} ${number}</span>`).join("");
-    card.innerHTML = `<strong>${country}</strong><div class="pill-list">${pills}</div>`;
+
+    const title = document.createElement("strong");
+    title.textContent = country;
+
+    const pillList = document.createElement("div");
+    pillList.className = "pill-list";
+
+    if (duplicates) {
+      for (const item of values) {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "pill duplicate-pill";
+        button.textContent = `${country} ${item.number} • qtd. ${item.qty} • sobra ${item.extra}`;
+        button.setAttribute("aria-label", `Remover uma repetida de ${country} ${item.number}. Quantidade atual ${item.qty}.`);
+        button.addEventListener("click", () => removeDuplicateExtra(country, item.number));
+        pillList.appendChild(button);
+      }
+    } else {
+      for (const number of values) {
+        const span = document.createElement("span");
+        span.className = "pill";
+        span.textContent = `${country} ${number}`;
+        pillList.appendChild(span);
+      }
+    }
+
+    card.appendChild(title);
+    card.appendChild(pillList);
     container.appendChild(card);
   }
 }
@@ -344,9 +384,13 @@ function parseStickerText(text) {
   const countryPattern = COUNTRIES.join("|");
   const normalized = text
     .toUpperCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
     .replace(/([A-Z]{3})(\d)/g, "$1 $2")
     .replace(/(\d)([A-Z]{3})/g, "$1 $2")
-    .replace(/[;|]/g, " ");
+    .replace(/N[UÚ]MERO|NUMERO|NRO|Nº|NO\.?/g, " ")
+    .replace(/[;|•·]/g, " ")
+    .replace(/[,:]/g, " ");
 
   const tokenRegex = new RegExp(`\\b(${countryPattern})\\b|\\b([1-9]|1[0-9]|20)\\b`, "g");
   const items = [];
@@ -370,22 +414,63 @@ function parseManualText() {
     return;
   }
   parsedItems = parseStickerText(text);
-  updateParsedResult("Texto lido localmente");
+  lastComparison = buildComparison(parsedItems);
+  updateParsedResult("Texto lido localmente", { comparison: lastComparison });
+
+  if ($("autoApply").checked && parsedItems.length) {
+    applyParsedItems({ silent: true });
+  }
 }
 
-function updateParsedResult(sourceLabel = "Resultado") {
+function buildComparison(items) {
+  const grouped = groupParsedItems(items);
+  const comparison = [];
+
+  for (const [country, values] of Object.entries(grouped)) {
+    for (const item of values) {
+      const current = state.inventory[country][item.number] || 0;
+      const after = current + item.qty;
+      comparison.push({
+        country,
+        number: item.number,
+        readQty: item.qty,
+        currentQty: current,
+        afterQty: after,
+        status: getReadStatus(current, after)
+      });
+    }
+  }
+
+  return comparison;
+}
+
+function getReadStatus(currentQty, afterQty) {
+  if (currentQty === 0 && afterQty === 1) return "nova figurinha — adicionada ao álbum";
+  if (currentQty === 0 && afterQty > 1) return "nova figurinha — já aparece repetida na leitura";
+  if (currentQty === 1) return "já tinha — virou repetida";
+  return "já era repetida — quantidade aumentada";
+}
+
+function updateParsedResult(sourceLabel = "Resultado", options = {}) {
   const grouped = groupParsedItems(parsedItems);
+  const comparison = options.comparison || buildComparison(parsedItems);
   const lines = [];
-  lines.push(`${sourceLabel}`);
+  lines.push(sourceLabel);
   lines.push(`Total identificado: ${parsedItems.length}`);
   lines.push("");
 
   if (!parsedItems.length) {
-    lines.push("Nenhuma figurinha reconhecida. Use o formato ARG 1, 4, 7 ou envie uma foto mais nítida.");
+    lines.push("Nenhuma figurinha reconhecida. Use o formato BRA 12, ARG 1, 4, 7 ou envie uma foto mais nítida.");
   } else {
+    lines.push("Figurinhas lidas:");
     for (const [country, values] of Object.entries(grouped)) {
       const numbers = values.map((item) => item.qty > 1 ? `${item.number} x${item.qty}` : `${item.number}`).join(", ");
       lines.push(`${country} ${numbers}`);
+    }
+    lines.push("");
+    lines.push("Verificação no álbum atual:");
+    for (const item of comparison) {
+      lines.push(`${item.country} ${item.number} — leitura x${item.readQty} | atual ${item.currentQty} → ${item.afterQty} | ${item.status}`);
     }
   }
 
@@ -396,6 +481,8 @@ function updateParsedResult(sourceLabel = "Resultado") {
 function groupParsedItems(items) {
   const groups = {};
   for (const item of items) {
+    if (!COUNTRIES.includes(item.country)) continue;
+    if (item.number < 1 || item.number > STICKERS_PER_COUNTRY) continue;
     if (!groups[item.country]) groups[item.country] = new Map();
     groups[item.country].set(item.number, (groups[item.country].get(item.number) || 0) + 1);
   }
@@ -427,7 +514,7 @@ async function analyzeWithOpenAI() {
 
   persistApiKeyPreference();
   $("analyzeAI").disabled = true;
-  $("aiResult").textContent = "Analisando com ChatGPT/OpenAI...";
+  $("aiResult").textContent = "Lendo foto/texto com ChatGPT/OpenAI...";
 
   try {
     const imageParts = [];
@@ -497,10 +584,15 @@ async function analyzeWithOpenAI() {
       .filter((item) => COUNTRIES.includes(item.country) && item.number >= 1 && item.number <= STICKERS_PER_COUNTRY)
       .map((item) => ({ country: item.country, number: Number(item.number) }));
 
-    updateParsedResult(`Resultado da IA${parsed.notes ? ` — ${parsed.notes}` : ""}`);
+    lastComparison = buildComparison(parsedItems);
+    updateParsedResult(`Resultado da IA${parsed.notes ? ` — ${parsed.notes}` : ""}`, { comparison: lastComparison });
+
+    if ($("autoApply").checked && parsedItems.length) {
+      applyParsedItems({ silent: true });
+    }
   } catch (error) {
     console.error(error);
-    $("aiResult").textContent = `Erro na análise: ${error.message}\n\nAlternativa: cole o texto manualmente no campo acima e toque em “Ler texto localmente”.`;
+    $("aiResult").textContent = `Erro na análise: ${error.message}\n\nAlternativa: cole o texto manualmente no campo acima e toque em “Ler texto e atualizar”.`;
   } finally {
     $("analyzeAI").disabled = false;
   }
@@ -508,13 +600,17 @@ async function analyzeWithOpenAI() {
 
 function buildOpenAIPrompt(manualText) {
   return `Você é um assistente para controle de figurinhas do álbum Copa 2026.
-Identifique apenas figurinhas dos países permitidos e números de 1 a 20.
+Identifique códigos de figurinhas em fotos ou textos, por exemplo: BRA 12, ARG 1, AUS 13.
+
 Países permitidos: ${COUNTRIES.join(", ")}.
+Números válidos: 1 a 20.
 
 Regras:
+- Leia o código do país e o número da figurinha.
 - Se uma mesma figurinha aparecer repetida, inclua a mesma combinação mais de uma vez em items.
 - Use somente o código do país exatamente como listado.
 - Ignore números fora de 1 a 20.
+- Ignore nomes, placares, textos do álbum ou qualquer item que não seja uma figurinha.
 - Não invente figurinhas que não estejam visíveis ou no texto.
 - Responda somente no JSON estruturado solicitado.
 
@@ -547,10 +643,12 @@ function fileToDataUrl(file) {
   });
 }
 
-function applyParsedItems() {
+function applyParsedItems(options = {}) {
   if (!parsedItems.length) return;
+  const { silent = false } = options;
   const mode = $("applyMode").value;
   const grouped = groupParsedItems(parsedItems);
+  const comparisonBefore = buildComparison(parsedItems);
 
   if (mode === "replace") {
     state = createEmptyState();
@@ -569,11 +667,17 @@ function applyParsedItems() {
 
   saveState();
   renderAll();
-  alert("Resultado aplicado ao álbum.");
+  lastComparison = comparisonBefore;
+  updateParsedResult("Resultado aplicado ao álbum", { comparison: comparisonBefore });
+
+  if (!silent) {
+    alert("Resultado aplicado ao álbum.");
+  }
 }
 
 function clearParsed() {
   parsedItems = [];
+  lastComparison = [];
   $("aiResult").textContent = "Nenhum resultado analisado ainda.";
   $("applyParsed").disabled = true;
 }
@@ -624,6 +728,169 @@ async function importJson(event) {
   } finally {
     event.target.value = "";
   }
+}
+
+function exportPdfReport() {
+  const lines = buildPdfReportLines();
+  const pdf = createPdfFromLines(lines, {
+    title: "Figurinhas Copa 2026",
+    subtitle: `Relatorio gerado em ${new Date().toLocaleString("pt-BR")}`
+  });
+
+  const blob = new Blob([pdf], { type: "application/pdf" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `figurinhas-copa-2026-relatorio-${new Date().toISOString().slice(0, 10)}.pdf`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+
+function buildPdfReportLines() {
+  const summary = getSummary();
+  const lines = [];
+  lines.push(`Resumo geral: ${summary.ownedTypes}/${TOTAL_STICKERS} no album | faltantes ${summary.missing} | tipos repetidos ${summary.duplicateTypes} | repetidas extras ${summary.duplicateExtras} | total fisico ${summary.physicalTotal}`);
+  lines.push("");
+  lines.push("Quantidade por pais e figurinhas faltantes:");
+  lines.push("");
+
+  for (const country of COUNTRIES) {
+    const owned = countOwnedByCountry(country);
+    const physical = countPhysicalByCountry(country);
+    const extras = countDuplicateExtrasByCountry(country);
+    const missing = [];
+    for (let number = 1; number <= STICKERS_PER_COUNTRY; number++) {
+      if (state.inventory[country][number] === 0) missing.push(number);
+    }
+    const missingText = missing.length ? missing.join(", ") : "nenhuma";
+    lines.push(`${country}: no album ${owned}/20 | total fisico ${physical} | extras ${extras} | faltam: ${missingText}`);
+  }
+
+  lines.push("");
+  lines.push("Repetidas:");
+  const duplicates = getDuplicatesMap();
+  if (!Object.keys(duplicates).length) {
+    lines.push("Nenhuma figurinha repetida.");
+  } else {
+    for (const [country, items] of Object.entries(duplicates)) {
+      const values = items.map((item) => `${item.number} qtd ${item.qty} sobra ${item.extra}`).join("; ");
+      lines.push(`${country}: ${values}`);
+    }
+  }
+
+  return lines;
+}
+
+function createPdfFromLines(rawLines, options = {}) {
+  const pageWidth = 595;
+  const pageHeight = 842;
+  const marginX = 42;
+  const topY = 800;
+  const lineHeight = 14;
+  const maxChars = 92;
+  const pages = [];
+  let currentPage = [];
+
+  const title = sanitizePdfText(options.title || "Relatorio");
+  const subtitle = sanitizePdfText(options.subtitle || "");
+
+  const wrappedLines = rawLines.flatMap((line) => wrapPdfLine(sanitizePdfText(line), maxChars));
+  for (const line of wrappedLines) {
+    if (currentPage.length >= 48) {
+      pages.push(currentPage);
+      currentPage = [];
+    }
+    currentPage.push(line);
+  }
+  if (currentPage.length) pages.push(currentPage);
+  if (!pages.length) pages.push([]);
+
+  const objects = [null];
+  const addObject = (value) => {
+    objects.push(value);
+    return objects.length - 1;
+  };
+
+  addObject(""); // 1 catalog placeholder
+  addObject(""); // 2 pages placeholder
+  addObject("<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>"); // 3 font
+
+  const pageRefs = [];
+  pages.forEach((pageLines, pageIndex) => {
+    const commands = [];
+    commands.push(textCommand(title, marginX, topY, 16));
+    if (subtitle) commands.push(textCommand(subtitle, marginX, topY - 20, 10));
+    commands.push(textCommand(`Pagina ${pageIndex + 1} de ${pages.length}`, 500, topY - 20, 9));
+
+    let y = topY - 46;
+    pageLines.forEach((line) => {
+      commands.push(textCommand(line || " ", marginX, y, 10));
+      y -= lineHeight;
+    });
+
+    const content = commands.join("\n");
+    const contentRef = addObject(`<< /Length ${new TextEncoder().encode(content).length} >>\nstream\n${content}\nendstream`);
+    const pageRef = addObject(`<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${pageWidth} ${pageHeight}] /Resources << /Font << /F1 3 0 R >> >> /Contents ${contentRef} 0 R >>`);
+    pageRefs.push(pageRef);
+  });
+
+  objects[1] = "<< /Type /Catalog /Pages 2 0 R >>";
+  objects[2] = `<< /Type /Pages /Kids [${pageRefs.map((ref) => `${ref} 0 R`).join(" ")}] /Count ${pageRefs.length} >>`;
+
+  let pdf = "%PDF-1.4\n";
+  const offsets = [0];
+  const encoder = new TextEncoder();
+  for (let index = 1; index < objects.length; index++) {
+    offsets[index] = encoder.encode(pdf).length;
+    pdf += `${index} 0 obj\n${objects[index]}\nendobj\n`;
+  }
+
+  const xrefOffset = encoder.encode(pdf).length;
+  pdf += `xref\n0 ${objects.length}\n`;
+  pdf += "0000000000 65535 f \n";
+  for (let index = 1; index < objects.length; index++) {
+    pdf += `${String(offsets[index]).padStart(10, "0")} 00000 n \n`;
+  }
+  pdf += `trailer\n<< /Size ${objects.length} /Root 1 0 R >>\nstartxref\n${xrefOffset}\n%%EOF`;
+
+  return encoder.encode(pdf);
+}
+
+function textCommand(text, x, y, fontSize) {
+  return `BT /F1 ${fontSize} Tf ${x} ${y} Td (${escapePdfText(text)}) Tj ET`;
+}
+
+function escapePdfText(text) {
+  return String(text).replace(/\\/g, "\\\\").replace(/\(/g, "\\(").replace(/\)/g, "\\)");
+}
+
+function sanitizePdfText(text) {
+  return String(text)
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[–—]/g, "-")
+    .replace(/[“”]/g, '"')
+    .replace(/[‘’]/g, "'")
+    .replace(/[^\x20-\x7E]/g, " ");
+}
+
+function wrapPdfLine(line, maxChars) {
+  if (!line) return [""];
+  const result = [];
+  let current = "";
+  for (const word of line.split(/\s+/)) {
+    if (!word) continue;
+    if ((current + " " + word).trim().length > maxChars) {
+      if (current) result.push(current);
+      current = word;
+    } else {
+      current = (current + " " + word).trim();
+    }
+  }
+  if (current) result.push(current);
+  return result.length ? result : [""];
 }
 
 function resetAll() {

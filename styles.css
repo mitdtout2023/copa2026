@@ -186,6 +186,27 @@ input, select, textarea {
   min-height: 44px;
 }
 
+.tap-help {
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 11px 12px;
+  background: #f8fafc;
+  color: var(--muted);
+  min-height: 44px;
+}
+
+.tap-help strong {
+  color: var(--ink);
+  display: block;
+  margin-bottom: 2px;
+}
+
+.tap-help span {
+  display: block;
+  font-size: 13px;
+  line-height: 1.35;
+}
+
 textarea {
   resize: vertical;
   line-height: 1.45;
@@ -325,6 +346,21 @@ textarea {
   padding: 8px 10px;
   font-weight: 700;
   font-size: 13px;
+  border: 1px solid transparent;
+}
+
+button.pill {
+  min-height: auto;
+  color: var(--ink);
+}
+
+.duplicate-pill {
+  background: var(--duplicate);
+  border-color: #f59e0b;
+}
+
+.duplicate-pill:active {
+  transform: scale(.98);
 }
 
 .card-stack {
