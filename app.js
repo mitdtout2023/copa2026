@@ -6,6 +6,54 @@ const COUNTRIES = [
 ];
 
 const STICKERS_PER_COUNTRY = 20;
+const COUNTRY_META = {
+  ALG: { name: "Argelia", flag: "🇩🇿" },
+  ARG: { name: "Argentina", flag: "🇦🇷" },
+  AUS: { name: "Australia", flag: "🇦🇺" },
+  BEL: { name: "Belgica", flag: "🇧🇪" },
+  BIH: { name: "Bosnia e Herzegovina", flag: "🇧🇦" },
+  BRA: { name: "Brasil", flag: "🇧🇷" },
+  CAN: { name: "Canada", flag: "🇨🇦" },
+  CIV: { name: "Costa do Marfim", flag: "🇨🇮" },
+  COL: { name: "Colombia", flag: "🇨🇴" },
+  CRO: { name: "Croacia", flag: "🇭🇷" },
+  ECU: { name: "Equador", flag: "🇪🇨" },
+  ENG: { name: "Inglaterra", flag: "🏴" },
+  ESP: { name: "Espanha", flag: "🇪🇸" },
+  FRA: { name: "Franca", flag: "🇫🇷" },
+  FWG: { name: "FWG", flag: "🏆" },
+  GER: { name: "Alemanha", flag: "🇩🇪" },
+  GHA: { name: "Gana", flag: "🇬🇭" },
+  IRN: { name: "Ira", flag: "🇮🇷" },
+  JPN: { name: "Japao", flag: "🇯🇵" },
+  KOR: { name: "Coreia do Sul", flag: "🇰🇷" },
+  KSA: { name: "Arabia Saudita", flag: "🇸🇦" },
+  MAR: { name: "Marrocos", flag: "🇲🇦" },
+  MEX: { name: "Mexico", flag: "🇲🇽" },
+  NED: { name: "Paises Baixos", flag: "🇳🇱" },
+  NOR: { name: "Noruega", flag: "🇳🇴" },
+  PAN: { name: "Panama", flag: "🇵🇦" },
+  POR: { name: "Portugal", flag: "🇵🇹" },
+  QAT: { name: "Catar", flag: "🇶🇦" },
+  RSA: { name: "Africa do Sul", flag: "🇿🇦" },
+  SCO: { name: "Escocia", flag: "🏴" },
+  SEN: { name: "Senegal", flag: "🇸🇳" },
+  SUI: { name: "Suica", flag: "🇨🇭" },
+  TUN: { name: "Tunisia", flag: "🇹🇳" },
+  URU: { name: "Uruguai", flag: "🇺🇾" },
+  USA: { name: "Estados Unidos", flag: "🇺🇸" },
+  UZB: { name: "Uzbequistao", flag: "🇺🇿" }
+};
+
+function getCountryMeta(country) {
+  return COUNTRY_META[country] || { name: country, flag: "🏳️" };
+}
+
+function getCountryLabel(country, includeCode = true) {
+  const meta = getCountryMeta(country);
+  return includeCode ? `${meta.flag} ${meta.name} (${country})` : `${meta.flag} ${meta.name}`;
+}
+
 const TOTAL_STICKERS = COUNTRIES.length * STICKERS_PER_COUNTRY;
 const STORAGE_KEY = "figurinhas-copa-2026-state-v2";
 const LEGACY_STORAGE_KEY = "figurinhas-copa-2026-state-v1";
@@ -101,7 +149,7 @@ function setupCountryFilter() {
   for (const country of COUNTRIES) {
     const option = document.createElement("option");
     option.value = country;
-    option.textContent = country;
+    option.textContent = getCountryLabel(country);
     select.appendChild(option);
   }
 }
@@ -201,7 +249,7 @@ function renderAlbum() {
     const physical = countPhysicalByCountry(country);
 
     const header = document.createElement("header");
-    header.innerHTML = `<h3>${country}</h3><span class="country-stats">${owned}/${STICKERS_PER_COUNTRY} no álbum • ${physical} total • ${dup} extras</span>`;
+    header.innerHTML = `<div><h3>${getCountryLabel(country, false)}</h3><div class="country-code">${country}</div></div><span class="country-stats">${owned}/${STICKERS_PER_COUNTRY} no álbum • ${physical} total • ${dup} extras</span>`;
 
     const grid = document.createElement("div");
     grid.className = "sticker-grid";
@@ -326,7 +374,7 @@ function renderGroupedList(container, map, emptyText, duplicates = false) {
     card.className = "list-card";
 
     const title = document.createElement("strong");
-    title.textContent = country;
+    title.textContent = getCountryLabel(country);
 
     const pillList = document.createElement("div");
     pillList.className = "pill-list";
@@ -358,7 +406,7 @@ function renderGroupedList(container, map, emptyText, duplicates = false) {
 
 function buildMissingText() {
   const map = getMissingMap();
-  const lines = Object.entries(map).map(([country, nums]) => `${country} ${nums.join(", ")}`);
+  const lines = Object.entries(map).map(([country, nums]) => `${getCountryLabel(country)}: ${nums.join(", ")}`);
   return lines.length ? lines.join("\n") : "Nenhuma figurinha faltante.";
 }
 
@@ -366,7 +414,7 @@ function buildDuplicatesText() {
   const map = getDuplicatesMap();
   const lines = Object.entries(map).map(([country, items]) => {
     const values = items.map((item) => `${item.number} (qtd. ${item.qty}, sobra ${item.extra})`).join(", ");
-    return `${country} ${values}`;
+    return `${getCountryLabel(country)}: ${values}`;
   });
   return lines.length ? lines.join("\n") : "Nenhuma figurinha repetida.";
 }
@@ -465,12 +513,12 @@ function updateParsedResult(sourceLabel = "Resultado", options = {}) {
     lines.push("Figurinhas lidas:");
     for (const [country, values] of Object.entries(grouped)) {
       const numbers = values.map((item) => item.qty > 1 ? `${item.number} x${item.qty}` : `${item.number}`).join(", ");
-      lines.push(`${country} ${numbers}`);
+      lines.push(`${getCountryLabel(country)}: ${numbers}`);
     }
     lines.push("");
     lines.push("Verificação no álbum atual:");
     for (const item of comparison) {
-      lines.push(`${item.country} ${item.number} — leitura x${item.readQty} | atual ${item.currentQty} → ${item.afterQty} | ${item.status}`);
+      lines.push(`${getCountryLabel(item.country)} ${item.number} — leitura x${item.readQty} | atual ${item.currentQty} → ${item.afterQty} | ${item.status}`);
     }
   }
 
@@ -765,7 +813,7 @@ function buildPdfReportLines() {
       if (state.inventory[country][number] === 0) missing.push(number);
     }
     const missingText = missing.length ? missing.join(", ") : "nenhuma";
-    lines.push(`${country}: no album ${owned}/20 | total fisico ${physical} | extras ${extras} | faltam: ${missingText}`);
+    lines.push(`${getCountryLabel(country)}: no album ${owned}/20 | total fisico ${physical} | extras ${extras} | faltam: ${missingText}`);
   }
 
   lines.push("");
@@ -776,7 +824,7 @@ function buildPdfReportLines() {
   } else {
     for (const [country, items] of Object.entries(duplicates)) {
       const values = items.map((item) => `${item.number} qtd ${item.qty} sobra ${item.extra}`).join("; ");
-      lines.push(`${country}: ${values}`);
+      lines.push(`${getCountryLabel(country)}: ${values}`);
     }
   }
 

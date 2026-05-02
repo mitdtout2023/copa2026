@@ -452,3 +452,15 @@ button.pill {
   .section-header { flex-direction: column; align-items: stretch; }
   .button-row button, .button-row .file-button { flex: 1; }
 }
+
+
+.country-code {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+  margin-top: 2px;
+}
+
+.country-card header > div {
+  min-width: 0;
+}

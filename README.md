@@ -69,3 +69,8 @@ O app vai tentar identificar códigos como `BRA 12`, `ARG 4`, `AUS 13`, verifica
 ## Segurança da API Key
 
 A chave da OpenAI é usada apenas quando você toca em **Ler foto com ChatGPT e atualizar**. Em uma publicação pública, não coloque a chave no código. Digite a chave no campo do app ou use um backend/proxy.
+
+
+## Atualização visual
+- Ícone do app configurado com a imagem enviada pelo usuário.
+- Bandeira (emoji) e nome de cada país exibidos na interface.
