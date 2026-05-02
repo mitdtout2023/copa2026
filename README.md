@@ -87,3 +87,9 @@ Como usar:
    - 2 ou mais = aumenta a quantidade repetida.
 
 Também é possível importar um arquivo `.txt`.
+
+
+## Ajuste para iPhone
+- Adicionados ícones Apple Touch em múltiplos tamanhos na raiz do site e na pasta `icons/`.
+- Incluídos `apple-touch-icon`, `apple-touch-icon-precomposed` e `favicon` no `index.html`.
+- Cache do Service Worker atualizado para forçar o refresh da versão no Safari.

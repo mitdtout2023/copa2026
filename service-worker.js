@@ -1,13 +1,21 @@
-const CACHE_NAME = "figurinhas-copa-2026-v5-textonly";
+const CACHE_NAME = "figurinhas-copa-2026-v6-iosicon";
 const APP_SHELL = [
   "./",
   "./index.html",
   "./styles.css",
   "./app.js",
   "./manifest.webmanifest",
+  "./favicon.png",
+  "./apple-touch-icon.png",
+  "./apple-touch-icon-167x167.png",
+  "./apple-touch-icon-152x152.png",
+  "./apple-touch-icon-120x120.png",
   "./icons/icon-192.png",
   "./icons/icon-512.png",
-  "./icons/apple-touch-icon.png"
+  "./icons/apple-touch-icon.png",
+  "./icons/apple-touch-icon-167x167.png",
+  "./icons/apple-touch-icon-152x152.png",
+  "./icons/apple-touch-icon-120x120.png"
 ];
 
 self.addEventListener("install", (event) => {
@@ -24,7 +32,5 @@ self.addEventListener("activate", (event) => {
 
 self.addEventListener("fetch", (event) => {
   if (event.request.method !== "GET") return;
-  event.respondWith(
-    caches.match(event.request).then((cached) => cached || fetch(event.request))
-  );
+  event.respondWith(caches.match(event.request).then((cached) => cached || fetch(event.request)));
 });
