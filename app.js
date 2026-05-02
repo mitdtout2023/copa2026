@@ -306,11 +306,13 @@ function removeDuplicateExtra(country, number) {
 
 function resetVisibleCountry() {
   const selected = $("countryFilter").value;
+
   if (selected === "ALL") {
     alert("Selecione um país específico para limpar.");
     return;
   }
-  if (!confirm(`Limpar todas as figurinhas de ${selected}?`)) return;
+
+  if (!confirm(`Limpar todas as figurinhas de ${getCountryLabel(selected)}?`)) return;
   for (let number = 1; number <= STICKERS_PER_COUNTRY; number++) {
     state.inventory[selected][number] = 0;
   }

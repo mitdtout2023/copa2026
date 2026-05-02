@@ -109,3 +109,14 @@ Na aba **Álbum**, use o campo **Buscar país** para localizar rapidamente pelo 
   - tenho: verde;
   - repetida: laranja escuro.
 - Rodapé atualizado com: **criado por Marcelo Ferreira**.
+
+
+## Atualização
+- Campo **Buscar país** removido da aba Álbum.
+- Mantido apenas o seletor de país.
+
+
+## Correção de cores da legenda
+- Ícone **faltante** corrigido para vermelho sólido.
+- Ícone **tenho** corrigido para verde sólido.
+- Ícone **repetida** corrigido para laranja escuro sólido.

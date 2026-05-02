@@ -6,9 +6,9 @@
   --line: #e2e8f0;
   --primary: #0f172a;
   --primary-ink: #ffffff;
-  --missing: #f1f5f9;
-  --owned: #dcfce7;
-  --duplicate: #fde68a;
+  --missing: #fecaca;
+  --owned: #bbf7d0;
+  --duplicate: #fdba74;
   --danger: #b91c1c;
   --shadow: 0 16px 40px rgba(15, 23, 42, .08);
   font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", sans-serif;
@@ -162,7 +162,7 @@ main {
 
 .toolbar {
   display: grid;
-  grid-template-columns: 1fr 1fr 1.3fr auto;
+  grid-template-columns: 1fr 1fr auto;
   gap: 12px;
   align-items: end;
 }
@@ -232,9 +232,9 @@ textarea {
   vertical-align: -1px;
 }
 
-.missing-dot { background: var(--missing); }
-.owned-dot { background: var(--owned); }
-.duplicate-dot { background: var(--duplicate); }
+
+
+
 
 .album-grid {
   display: grid;
@@ -476,4 +476,36 @@ button.pill {
 .empty-search h3 {
   color: var(--ink);
   margin-bottom: 6px;
+}
+
+/* Correção explícita das cores da legenda */
+.missing-dot {
+  background: #ef4444 !important;
+  border-color: #b91c1c !important;
+}
+
+.owned-dot {
+  background: #22c55e !important;
+  border-color: #15803d !important;
+}
+
+.duplicate-dot {
+  background: #ea580c !important;
+  border-color: #9a3412 !important;
+}
+
+/* Correção explícita das cores das figurinhas */
+.sticker {
+  background: #fecaca;
+  border-color: #ef4444;
+}
+
+.sticker.owned {
+  background: #bbf7d0;
+  border-color: #22c55e;
+}
+
+.sticker.duplicate {
+  background: #fdba74;
+  border-color: #ea580c;
 }
