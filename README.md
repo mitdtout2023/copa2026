@@ -146,3 +146,8 @@ Na aba **Álbum**, use o campo **Buscar país** para localizar rapidamente pelo 
 - Ícone do app reposicionado no canto superior direito, na linha do título **Copa 2026**.
 - Legenda alterada de **tenho** para **Total no álbum**.
 - Rodapé atualizado com **Criado por Marcelo Ferreira** e logo M@rstech.
+
+
+## Correções
+- Removido o ícone duplicado ao lado do título.
+- Logo do rodapé substituído pelo arquivo correto e adicionado também na raiz do app para compatibilidade.
