@@ -93,3 +93,19 @@ Também é possível importar um arquivo `.txt`.
 - Adicionados ícones Apple Touch em múltiplos tamanhos na raiz do site e na pasta `icons/`.
 - Incluídos `apple-touch-icon`, `apple-touch-icon-precomposed` e `favicon` no `index.html`.
 - Cache do Service Worker atualizado para forçar o refresh da versão no Safari.
+
+
+## Busca por país
+Na aba **Álbum**, use o campo **Buscar país** para localizar rapidamente pelo código ou nome:
+- `BRA` ou `Brasil`
+- `ARG` ou `Argentina`
+- `USA` ou `Estados Unidos`
+
+
+## Atualização visual
+- Título atualizado para **Copa do mundo 2026**.
+- Cores dos status:
+  - faltante: vermelho;
+  - tenho: verde;
+  - repetida: laranja escuro.
+- Rodapé atualizado com: **criado por Marcelo Ferreira**.

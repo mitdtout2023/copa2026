@@ -162,7 +162,7 @@ main {
 
 .toolbar {
   display: grid;
-  grid-template-columns: 1fr 1fr auto;
+  grid-template-columns: 1fr 1fr 1.3fr auto;
   gap: 12px;
   align-items: end;
 }
@@ -466,4 +466,14 @@ button.pill {
 
 .country-card header > div {
   min-width: 0;
+}
+
+.empty-search {
+  text-align: center;
+  color: var(--muted);
+}
+
+.empty-search h3 {
+  color: var(--ink);
+  margin-bottom: 6px;
 }
