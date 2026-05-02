@@ -453,6 +453,9 @@ button.pill {
   .button-row button, .button-row .file-button { flex: 1; }
 }
 
+.full-width {
+  width: 100%;
+}
 
 .country-code {
   color: var(--muted);

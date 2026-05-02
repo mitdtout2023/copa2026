@@ -1,7 +1,7 @@
 {
   "name": "Figurinhas Copa 2026",
   "short_name": "Figurinhas 2026",
-  "description": "Controle local de figurinhas do álbum, repetidas e faltantes com apoio de ChatGPT/OpenAI.",
+  "description": "Controle local de figurinhas do álbum, repetidas e faltantes com importação por texto.",
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",

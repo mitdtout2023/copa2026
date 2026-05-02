@@ -71,6 +71,19 @@ O app vai tentar identificar códigos como `BRA 12`, `ARG 4`, `AUS 13`, verifica
 A chave da OpenAI é usada apenas quando você toca em **Ler foto com ChatGPT e atualizar**. Em uma publicação pública, não coloque a chave no código. Digite a chave no campo do app ou use um backend/proxy.
 
 
-## Atualização visual
-- Ícone do app configurado com a imagem enviada pelo usuário.
-- Bandeira (emoji) e nome de cada país exibidos na interface.
+## Versão texto apenas
+Esta versão remove o envio de foto e a necessidade de OpenAI API Key.
+
+Como usar:
+1. Abra a aba **Importar texto**.
+2. Cole uma lista como:
+   - `BRA 12`
+   - `ARG 1, 4, 7`
+   - `AUS 8, AUS 13, AUS 13`
+3. Toque em **Ler texto e atualizar**.
+4. O app atualiza automaticamente:
+   - 0 para 1 = figurinha adicionada ao álbum;
+   - 1 para 2 = vira repetida;
+   - 2 ou mais = aumenta a quantidade repetida.
+
+Também é possível importar um arquivo `.txt`.

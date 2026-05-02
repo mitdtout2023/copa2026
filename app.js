@@ -7,42 +7,42 @@ const COUNTRIES = [
 
 const STICKERS_PER_COUNTRY = 20;
 const COUNTRY_META = {
-  ALG: { name: "Argelia", flag: "🇩🇿" },
+  ALG: { name: "Argélia", flag: "🇩🇿" },
   ARG: { name: "Argentina", flag: "🇦🇷" },
-  AUS: { name: "Australia", flag: "🇦🇺" },
-  BEL: { name: "Belgica", flag: "🇧🇪" },
-  BIH: { name: "Bosnia e Herzegovina", flag: "🇧🇦" },
+  AUS: { name: "Austrália", flag: "🇦🇺" },
+  BEL: { name: "Bélgica", flag: "🇧🇪" },
+  BIH: { name: "Bósnia e Herzegovina", flag: "🇧🇦" },
   BRA: { name: "Brasil", flag: "🇧🇷" },
-  CAN: { name: "Canada", flag: "🇨🇦" },
+  CAN: { name: "Canadá", flag: "🇨🇦" },
   CIV: { name: "Costa do Marfim", flag: "🇨🇮" },
-  COL: { name: "Colombia", flag: "🇨🇴" },
-  CRO: { name: "Croacia", flag: "🇭🇷" },
+  COL: { name: "Colômbia", flag: "🇨🇴" },
+  CRO: { name: "Croácia", flag: "🇭🇷" },
   ECU: { name: "Equador", flag: "🇪🇨" },
   ENG: { name: "Inglaterra", flag: "🏴" },
   ESP: { name: "Espanha", flag: "🇪🇸" },
-  FRA: { name: "Franca", flag: "🇫🇷" },
-  FWG: { name: "FWG", flag: "🏆" },
+  FRA: { name: "França", flag: "🇫🇷" },
+  FWG: { name: "FIFA World Cup", flag: "🏆" },
   GER: { name: "Alemanha", flag: "🇩🇪" },
   GHA: { name: "Gana", flag: "🇬🇭" },
-  IRN: { name: "Ira", flag: "🇮🇷" },
-  JPN: { name: "Japao", flag: "🇯🇵" },
+  IRN: { name: "Irã", flag: "🇮🇷" },
+  JPN: { name: "Japão", flag: "🇯🇵" },
   KOR: { name: "Coreia do Sul", flag: "🇰🇷" },
-  KSA: { name: "Arabia Saudita", flag: "🇸🇦" },
+  KSA: { name: "Arábia Saudita", flag: "🇸🇦" },
   MAR: { name: "Marrocos", flag: "🇲🇦" },
-  MEX: { name: "Mexico", flag: "🇲🇽" },
-  NED: { name: "Paises Baixos", flag: "🇳🇱" },
+  MEX: { name: "México", flag: "🇲🇽" },
+  NED: { name: "Países Baixos", flag: "🇳🇱" },
   NOR: { name: "Noruega", flag: "🇳🇴" },
-  PAN: { name: "Panama", flag: "🇵🇦" },
+  PAN: { name: "Panamá", flag: "🇵🇦" },
   POR: { name: "Portugal", flag: "🇵🇹" },
   QAT: { name: "Catar", flag: "🇶🇦" },
-  RSA: { name: "Africa do Sul", flag: "🇿🇦" },
-  SCO: { name: "Escocia", flag: "🏴" },
+  RSA: { name: "África do Sul", flag: "🇿🇦" },
+  SCO: { name: "Escócia", flag: "🏴" },
   SEN: { name: "Senegal", flag: "🇸🇳" },
-  SUI: { name: "Suica", flag: "🇨🇭" },
-  TUN: { name: "Tunisia", flag: "🇹🇳" },
+  SUI: { name: "Suíça", flag: "🇨🇭" },
+  TUN: { name: "Tunísia", flag: "🇹🇳" },
   URU: { name: "Uruguai", flag: "🇺🇾" },
   USA: { name: "Estados Unidos", flag: "🇺🇸" },
-  UZB: { name: "Uzbequistao", flag: "🇺🇿" }
+  UZB: { name: "Uzbequistão", flag: "🇺🇿" }
 };
 
 function getCountryMeta(country) {
@@ -57,7 +57,6 @@ function getCountryLabel(country, includeCode = true) {
 const TOTAL_STICKERS = COUNTRIES.length * STICKERS_PER_COUNTRY;
 const STORAGE_KEY = "figurinhas-copa-2026-state-v2";
 const LEGACY_STORAGE_KEY = "figurinhas-copa-2026-state-v1";
-const API_KEY_STORAGE = "figurinhas-openai-api-key";
 
 let state = createEmptyState();
 let parsedItems = [];
@@ -76,8 +75,7 @@ function createEmptyState() {
   }
   return {
     inventory,
-    updatedAt: new Date().toISOString(),
-    model: "gpt-4.1-mini"
+    updatedAt: new Date().toISOString()
   };
 }
 
@@ -94,7 +92,6 @@ function loadState() {
       }
     }
     fresh.updatedAt = saved.updatedAt || new Date().toISOString();
-    fresh.model = saved.model || "gpt-4.1-mini";
     state = fresh;
   } catch (error) {
     console.warn("Não foi possível carregar o estado salvo.", error);
@@ -103,7 +100,6 @@ function loadState() {
 
 function saveState() {
   state.updatedAt = new Date().toISOString();
-  state.model = $("modelName")?.value?.trim() || state.model;
   localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
   const status = $("saveStatus");
   if (status) {
@@ -160,16 +156,13 @@ function setupEvents() {
   $("copyMissing").addEventListener("click", () => copyText(buildMissingText()));
   $("copyDuplicates").addEventListener("click", () => copyText(buildDuplicatesText()));
   $("parseManual").addEventListener("click", parseManualText);
-  $("analyzeAI").addEventListener("click", analyzeWithOpenAI);
   $("applyParsed").addEventListener("click", () => applyParsedItems({ silent: false, allowRepeat: true }));
   $("clearParsed").addEventListener("click", clearParsed);
   $("exportJson").addEventListener("click", exportJson);
   $("exportPdf").addEventListener("click", exportPdfReport);
   $("importJson").addEventListener("change", importJson);
   $("resetAll").addEventListener("click", resetAll);
-  $("modelName").addEventListener("change", saveState);
-  $("saveApiKey").addEventListener("change", persistApiKeyPreference);
-  $("apiKey").addEventListener("change", persistApiKeyPreference);
+  $("textFileInput").addEventListener("change", importTextFile);
 }
 
 function setupPwaInstall() {
@@ -455,15 +448,32 @@ function parseStickerText(text) {
   return items;
 }
 
+
+async function importTextFile(event) {
+  const file = event.target.files?.[0];
+  if (!file) return;
+
+  try {
+    const text = await file.text();
+    const currentText = $("manualText").value.trim();
+    $("manualText").value = currentText ? `${currentText}\n${text}` : text;
+    parseManualText();
+  } catch (error) {
+    alert(`Não foi possível ler o arquivo de texto: ${error.message}`);
+  } finally {
+    event.target.value = "";
+  }
+}
+
 function parseManualText() {
   const text = $("manualText").value.trim();
   if (!text) {
-    alert("Cole uma lista ou texto antes de analisar.");
+    alert("Cole ou importe um texto antes de analisar.");
     return;
   }
   parsedItems = parseStickerText(text);
   lastComparison = buildComparison(parsedItems);
-  updateParsedResult("Texto lido localmente", { comparison: lastComparison });
+  updateParsedResult("Texto lido pelo app", { comparison: lastComparison });
 
   if ($("autoApply").checked && parsedItems.length) {
     applyParsedItems({ silent: true });
@@ -545,152 +555,6 @@ function groupParsedItems(items) {
   return output;
 }
 
-async function analyzeWithOpenAI() {
-  const apiKey = $("apiKey").value.trim();
-  const model = $("modelName").value.trim() || "gpt-4.1-mini";
-  const files = Array.from($("imageInput").files || []);
-  const manualText = $("manualText").value.trim();
-
-  if (!apiKey) {
-    alert("Informe sua OpenAI API Key.");
-    return;
-  }
-  if (!files.length && !manualText) {
-    alert("Envie pelo menos uma foto ou cole um texto.");
-    return;
-  }
-
-  persistApiKeyPreference();
-  $("analyzeAI").disabled = true;
-  $("aiResult").textContent = "Lendo foto/texto com ChatGPT/OpenAI...";
-
-  try {
-    const imageParts = [];
-    for (const file of files) {
-      const dataUrl = await fileToDataUrl(file);
-      imageParts.push({ type: "input_image", image_url: dataUrl });
-    }
-
-    const prompt = buildOpenAIPrompt(manualText);
-    const body = {
-      model,
-      input: [
-        {
-          role: "user",
-          content: [
-            { type: "input_text", text: prompt },
-            ...imageParts
-          ]
-        }
-      ],
-      text: {
-        format: {
-          type: "json_schema",
-          name: "figurinhas_identificadas",
-          strict: true,
-          schema: {
-            type: "object",
-            additionalProperties: false,
-            properties: {
-              items: {
-                type: "array",
-                items: {
-                  type: "object",
-                  additionalProperties: false,
-                  properties: {
-                    country: { type: "string", enum: COUNTRIES },
-                    number: { type: "integer", minimum: 1, maximum: 20 }
-                  },
-                  required: ["country", "number"]
-                }
-              },
-              notes: { type: "string" }
-            },
-            required: ["items", "notes"]
-          }
-        }
-      }
-    };
-
-    const response = await fetch("https://api.openai.com/v1/responses", {
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${apiKey}`,
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify(body)
-    });
-
-    const data = await response.json();
-    if (!response.ok) {
-      throw new Error(data?.error?.message || `Erro HTTP ${response.status}`);
-    }
-
-    const text = extractOutputText(data);
-    const parsed = JSON.parse(text);
-    parsedItems = (parsed.items || [])
-      .filter((item) => COUNTRIES.includes(item.country) && item.number >= 1 && item.number <= STICKERS_PER_COUNTRY)
-      .map((item) => ({ country: item.country, number: Number(item.number) }));
-
-    lastComparison = buildComparison(parsedItems);
-    updateParsedResult(`Resultado da IA${parsed.notes ? ` — ${parsed.notes}` : ""}`, { comparison: lastComparison });
-
-    if ($("autoApply").checked && parsedItems.length) {
-      applyParsedItems({ silent: true });
-    }
-  } catch (error) {
-    console.error(error);
-    $("aiResult").textContent = `Erro na análise: ${error.message}\n\nAlternativa: cole o texto manualmente no campo acima e toque em “Ler texto e atualizar”.`;
-  } finally {
-    $("analyzeAI").disabled = false;
-  }
-}
-
-function buildOpenAIPrompt(manualText) {
-  return `Você é um assistente para controle de figurinhas do álbum Copa 2026.
-Identifique códigos de figurinhas em fotos ou textos, por exemplo: BRA 12, ARG 1, AUS 13.
-
-Países permitidos: ${COUNTRIES.join(", ")}.
-Números válidos: 1 a 20.
-
-Regras:
-- Leia o código do país e o número da figurinha.
-- Se uma mesma figurinha aparecer repetida, inclua a mesma combinação mais de uma vez em items.
-- Use somente o código do país exatamente como listado.
-- Ignore números fora de 1 a 20.
-- Ignore nomes, placares, textos do álbum ou qualquer item que não seja uma figurinha.
-- Não invente figurinhas que não estejam visíveis ou no texto.
-- Responda somente no JSON estruturado solicitado.
-
-Texto informado pelo usuário:
-${manualText || "(sem texto; analisar apenas imagem)"}`;
-}
-
-function extractOutputText(responseData) {
-  if (responseData.output_text) return responseData.output_text;
-
-  const chunks = [];
-  for (const output of responseData.output || []) {
-    for (const content of output.content || []) {
-      if (content.type === "output_text" && content.text) chunks.push(content.text);
-      if (content.type === "text" && content.text) chunks.push(content.text);
-    }
-  }
-
-  const text = chunks.join("\n").trim();
-  if (!text) throw new Error("A resposta da API não retornou texto estruturado.");
-  return text;
-}
-
-function fileToDataUrl(file) {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(reader.result);
-    reader.onerror = () => reject(new Error(`Falha ao ler ${file.name}.`));
-    reader.readAsDataURL(file);
-  });
-}
-
 function applyParsedItems(options = {}) {
   if (!parsedItems.length) return;
   const { silent = false } = options;
@@ -726,19 +590,10 @@ function applyParsedItems(options = {}) {
 function clearParsed() {
   parsedItems = [];
   lastComparison = [];
-  $("aiResult").textContent = "Nenhum resultado analisado ainda.";
+  $("aiResult").textContent = "Nenhum texto analisado ainda.";
   $("applyParsed").disabled = true;
 }
 
-function persistApiKeyPreference() {
-  const shouldSave = $("saveApiKey").checked;
-  const key = $("apiKey").value.trim();
-  if (shouldSave && key) {
-    localStorage.setItem(API_KEY_STORAGE, key);
-  } else {
-    localStorage.removeItem(API_KEY_STORAGE);
-  }
-}
 
 function exportJson() {
   const blob = new Blob([JSON.stringify(state, null, 2)], { type: "application/json" });
@@ -766,7 +621,6 @@ async function importJson(event) {
         fresh.inventory[country][number] = Number.isInteger(value) && value >= 0 ? value : 0;
       }
     }
-    fresh.model = imported.model || state.model;
     state = fresh;
     saveState();
     renderAll();
