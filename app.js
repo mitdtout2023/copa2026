@@ -843,11 +843,11 @@ function drawTableLine(ctx, x, y, width, height) {
 function drawPdfFooter(ctx, canvasWidth, canvasHeight, margin) {
   ctx.fillStyle = "#64748b";
   ctx.font = "16px Arial, sans-serif";
-  ctx.fillText("Legenda: vermelho = faltante | verde = tenho | laranja = repetida", margin, canvasHeight - 28);
+  ctx.fillText("Legenda: vermelho = faltante | verde = Total no álbum | laranja = repetida", margin, canvasHeight - 28);
 
   ctx.textAlign = "right";
   ctx.font = "700 16px Arial, sans-serif";
-  ctx.fillText("criado por Marcelo Ferreira", canvasWidth - margin, canvasHeight - 28);
+  ctx.fillText("Criado por Marcelo Ferreira", canvasWidth - margin, canvasHeight - 28);
   ctx.textAlign = "left";
 }
 

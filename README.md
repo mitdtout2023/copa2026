@@ -139,3 +139,10 @@ Na aba **Álbum**, use o campo **Buscar país** para localizar rapidamente pelo 
 ## Atualização visual
 - Removido o card **Repetidas extras** da tela principal.
 - Incluído o ícone `apple-touch-icon.png` ao lado do título **Copa 2026**.
+
+
+## Atualização visual
+- Removido o texto “Álbum, faltantes, repetidas e importação por texto.”
+- Ícone do app reposicionado no canto superior direito, na linha do título **Copa 2026**.
+- Legenda alterada de **tenho** para **Total no álbum**.
+- Rodapé atualizado com **Criado por Marcelo Ferreira** e logo M@rstech.

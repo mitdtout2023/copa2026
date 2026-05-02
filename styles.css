@@ -573,3 +573,50 @@ button.pill {
     font-size: 24px;
   }
 }
+
+/* Atualização do cabeçalho e rodapé */
+.app-title-row-right {
+  width: 100%;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.app-title-row-right h1 {
+  margin: 0;
+}
+
+.app-title-row-right .app-title-icon {
+  margin-left: auto;
+}
+
+.footer {
+  justify-content: center;
+  text-align: center;
+  padding: 22px 18px calc(22px + env(safe-area-inset-bottom));
+}
+
+.footer-credit-block {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  color: var(--muted);
+}
+
+.footer-credit-block strong {
+  color: var(--ink);
+  font-weight: 800;
+}
+
+.footer-logo {
+  width: min(220px, 70vw);
+  height: auto;
+  object-fit: contain;
+}
+
+@media (max-width: 430px) {
+  .app-title-row-right .app-title-icon {
+    width: 46px;
+    height: 46px;
+  }
+}

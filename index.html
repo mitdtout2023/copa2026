@@ -22,11 +22,13 @@
   <header class="app-header">
     <div>
       <p class="eyebrow">Controle local</p>
-      <div class="app-title-row">
-        <img src="apple-touch-icon.png" alt="Ícone Copa 2026" class="app-title-icon" />
+      <div class="app-title-row app-title-row-right">
+        <div class="app-title-row app-title-row-right">
         <h1>Copa 2026</h1>
+        <img src="apple-touch-icon.png" alt="Ícone Copa 2026" class="app-title-icon" />
       </div>
-      <p class="subtitle">Álbum, faltantes, repetidas e importação por texto.</p>
+        <img src="apple-touch-icon.png" alt="Ícone Copa 2026" class="app-title-icon" />
+      </div>
     </div>
     <button id="installButton" class="ghost hidden">Instalar</button>
   </header>
@@ -71,7 +73,7 @@
 
       <div class="legend">
         <span><i class="dot missing-dot"></i>faltante</span>
-        <span><i class="dot owned-dot"></i>tenho</span>
+        <span><i class="dot owned-dot"></i>Total no álbum</span>
         <span><i class="dot duplicate-dot"></i>repetida</span>
       </div>
 
@@ -178,7 +180,11 @@
   </main>
 
   <footer class="footer">
-    <span id="saveStatus">Dados salvos localmente.</span>
+    <div class="footer-credit-block">
+      <span id="saveStatus">Dados salvos localmente.</span>
+      <strong>Criado por Marcelo Ferreira</strong>
+      <img src="icons/marstech-logo.png" alt="M@rstech innovation & learning" class="footer-logo" />
+    </div>
   </footer>
 
   <script src="app.js" defer></script>

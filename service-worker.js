@@ -1,4 +1,4 @@
-const CACHE_NAME = "figurinhas-copa-2026-v13-sem-repetidas-extras-icone-titulo";
+const CACHE_NAME = "figurinhas-copa-2026-v14-marstech-footer-title";
 const APP_SHELL = [
   "./",
   "./index.html",
@@ -15,7 +15,8 @@ const APP_SHELL = [
   "./icons/apple-touch-icon.png",
   "./icons/apple-touch-icon-167x167.png",
   "./icons/apple-touch-icon-152x152.png",
-  "./icons/apple-touch-icon-120x120.png"
+  "./icons/apple-touch-icon-120x120.png",
+  "./icons/marstech-logo.png"
 ];
 
 self.addEventListener("install", (event) => {
