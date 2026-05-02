@@ -1,0 +1,197 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#0f172a" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-title" content="Figurinhas 2026" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="apple-touch-icon" href="icons/icon-192.png" />
+  <link rel="stylesheet" href="styles.css" />
+  <title>Figurinhas Copa 2026</title>
+</head>
+<body>
+  <header class="app-header">
+    <div>
+      <p class="eyebrow">Controle local</p>
+      <h1>Figurinhas Copa 2026</h1>
+      <p class="subtitle">Álbum, faltantes, repetidas e leitura com ChatGPT/OpenAI.</p>
+    </div>
+    <button id="installButton" class="ghost hidden">Instalar</button>
+  </header>
+
+  <main>
+    <section class="summary-grid" aria-label="Resumo do álbum">
+      <article class="summary-card">
+        <span>Total no álbum</span>
+        <strong id="ownedCount">0</strong>
+      </article>
+      <article class="summary-card">
+        <span>Faltantes</span>
+        <strong id="missingCount">0</strong>
+      </article>
+      <article class="summary-card">
+        <span>Tipos repetidos</span>
+        <strong id="duplicateTypesCount">0</strong>
+      </article>
+      <article class="summary-card">
+        <span>Repetidas extras</span>
+        <strong id="duplicateExtrasCount">0</strong>
+      </article>
+    </section>
+
+    <nav class="tabs" aria-label="Seções do aplicativo">
+      <button class="tab active" data-tab="album">Álbum</button>
+      <button class="tab" data-tab="missing">Faltantes</button>
+      <button class="tab" data-tab="duplicates">Repetidas</button>
+      <button class="tab" data-tab="ai">ChatGPT / IA</button>
+      <button class="tab" data-tab="settings">Backup</button>
+    </nav>
+
+    <section id="album" class="tab-panel active">
+      <div class="toolbar">
+        <label>
+          País
+          <select id="countryFilter"></select>
+        </label>
+        <label>
+          Modo de toque
+          <select id="tapMode">
+            <option value="increment">Adicionar +1</option>
+            <option value="decrement">Remover -1</option>
+            <option value="toggle">Alternar 0/1</option>
+          </select>
+        </label>
+        <button id="resetVisibleCountry" class="ghost">Limpar país</button>
+      </div>
+
+      <div class="legend">
+        <span><i class="dot missing-dot"></i>faltante</span>
+        <span><i class="dot owned-dot"></i>tenho</span>
+        <span><i class="dot duplicate-dot"></i>repetida</span>
+      </div>
+
+      <div id="albumGrid" class="album-grid"></div>
+    </section>
+
+    <section id="missing" class="tab-panel">
+      <div class="section-header">
+        <div>
+          <h2>Figurinhas faltantes</h2>
+          <p>Lista gerada automaticamente a partir das quantidades salvas.</p>
+        </div>
+        <button id="copyMissing" class="ghost">Copiar lista</button>
+      </div>
+      <div id="missingList" class="list-area"></div>
+    </section>
+
+    <section id="duplicates" class="tab-panel">
+      <div class="section-header">
+        <div>
+          <h2>Figurinhas repetidas</h2>
+          <p>Mostra figurinhas com quantidade maior que 1.</p>
+        </div>
+        <button id="copyDuplicates" class="ghost">Copiar lista</button>
+      </div>
+      <div id="duplicatesList" class="list-area"></div>
+    </section>
+
+    <section id="ai" class="tab-panel">
+      <div class="section-header">
+        <div>
+          <h2>Leitura com ChatGPT/OpenAI</h2>
+          <p>Envie uma foto ou cole uma lista. O resultado pode ser aplicado ao álbum local.</p>
+        </div>
+      </div>
+
+      <div class="card-stack">
+        <article class="form-card">
+          <h3>1. Configurar API</h3>
+          <label>
+            OpenAI API Key
+            <input id="apiKey" type="password" placeholder="sk-..." autocomplete="off" />
+          </label>
+          <label>
+            Modelo
+            <input id="modelName" type="text" value="gpt-4.1-mini" />
+          </label>
+          <label class="inline-check">
+            <input id="saveApiKey" type="checkbox" />
+            Salvar chave neste navegador
+          </label>
+          <p class="help-text">Use sua chave apenas em rede confiável. Em uma publicação pública, prefira um backend/proxy para proteger a chave.</p>
+        </article>
+
+        <article class="form-card">
+          <h3>2. Foto ou texto</h3>
+          <label>
+            Foto das figurinhas
+            <input id="imageInput" type="file" accept="image/*" multiple />
+          </label>
+          <label>
+            Lista manual ou texto livre
+            <textarea id="manualText" rows="7" placeholder="Ex.: ARG 1, 4, 7, 8, 11, 17, 20&#10;BRA 18&#10;AUS 8, AUS 13, AUS 13"></textarea>
+          </label>
+          <div class="button-row">
+            <button id="parseManual" class="primary">Ler texto localmente</button>
+            <button id="analyzeAI" class="primary">Analisar com ChatGPT</button>
+          </div>
+        </article>
+
+        <article class="form-card">
+          <h3>3. Aplicar resultado</h3>
+          <label>
+            Como aplicar
+            <select id="applyMode">
+              <option value="add">Adicionar quantidades identificadas</option>
+              <option value="setDetected">Marcar identificadas como tenho/repetidas</option>
+              <option value="replace">Substituir álbum pelo resultado</option>
+            </select>
+          </label>
+          <div class="button-row">
+            <button id="applyParsed" class="primary" disabled>Aplicar ao álbum</button>
+            <button id="clearParsed" class="ghost">Limpar resultado</button>
+          </div>
+          <pre id="aiResult" class="result-box" aria-live="polite">Nenhum resultado analisado ainda.</pre>
+        </article>
+      </div>
+    </section>
+
+    <section id="settings" class="tab-panel">
+      <div class="section-header">
+        <div>
+          <h2>Backup e manutenção</h2>
+          <p>Exporte/importe os dados locais do navegador.</p>
+        </div>
+      </div>
+
+      <div class="card-stack">
+        <article class="form-card">
+          <h3>Backup</h3>
+          <div class="button-row">
+            <button id="exportJson" class="primary">Exportar JSON</button>
+            <label class="file-button">
+              Importar JSON
+              <input id="importJson" type="file" accept="application/json" />
+            </label>
+          </div>
+        </article>
+
+        <article class="form-card danger-zone">
+          <h3>Zona de cuidado</h3>
+          <p>Essa ação remove todas as marcações do álbum.</p>
+          <button id="resetAll" class="danger">Limpar tudo</button>
+        </article>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <span id="saveStatus">Dados salvos localmente.</span>
+  </footer>
+
+  <script src="app.js" defer></script>
+</body>
+</html>
