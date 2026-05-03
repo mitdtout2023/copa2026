@@ -234,3 +234,10 @@ Na aba **Álbum**, use o campo **Buscar país** para localizar rapidamente pelo 
 - Apenas códigos completos como `JPN 10` e `JPN 15` são aceitos.
 - Números soltos da imagem, como `2026`, lote, licença ou textos da embalagem, são ignorados.
 - Antes de atualizar o álbum, o app mostra uma confirmação com os códigos encontrados.
+
+
+## Correção da leitura JPN 10 e JPN 15
+- O leitor de foto agora faz OCR em múltiplas regiões da imagem.
+- Inclui foco em faixa superior, lado direito superior e regiões de código.
+- Isso melhora a leitura quando aparecem duas figurinhas parcialmente sobrepostas, como `JPN 10` e `JPN 15`.
+- Continua ignorando números soltos que não estejam junto de um código de país.

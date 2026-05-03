@@ -239,6 +239,10 @@ function parseStickerCodesStrict(text) {
     .toUpperCase()
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, " ")
+    .replace(/J\s*P\s*N/g, "JPN")
+    .replace(/B\s*R\s*A/g, "BRA")
+    .replace(/A\s*R\s*G/g, "ARG")
+    .replace(/U\s*S\s*A/g, "USA")
     .replace(/[|;:•·]/g, " ")
     .replace(/\s+/g, " ");
 
@@ -257,8 +261,6 @@ function parseStickerCodesStrict(text) {
     items.push({ country, number });
   }
 
-  // Remove duplicações exatas causadas por OCR repetindo o mesmo código na mesma foto.
-  // Se houver duas figurinhas iguais na mesma foto, o usuário pode confirmar manualmente depois.
   const unique = [];
   const seen = new Set();
 
@@ -311,7 +313,7 @@ async function handleSingleStickerImage(event) {
     const items = parseStickerCodesStrict(text);
 
     if (!items.length) {
-      const manualCode = prompt(`Não consegui identificar automaticamente o código da figurinha.\n\nDigite apenas o código da figurinha, exemplo: JPN 15`);
+      const manualCode = prompt(`Não consegui identificar automaticamente o código da figurinha.\n\nDigite os códigos corretos, exemplo: JPN 10, JPN 15`);
       if (manualCode === null) return;
 
       const manualItems = parseStickerCodesStrict(manualCode);
@@ -362,11 +364,114 @@ async function handleSingleStickerImage(event) {
 async function recognizeStickerTextFromImage(file) {
   await loadTesseractIfNeeded();
 
-  const result = await Tesseract.recognize(file, "eng", {
-    tessedit_char_whitelist: "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 "
-  });
+  const image = await loadImageFromFile(file);
+  const variants = buildStickerCodeImageVariants(image);
+  const texts = [];
 
-  return result?.data?.text || "";
+  // Faz OCR em regiões diferentes da imagem.
+  // Isso ajuda quando há mais de uma figurinha na foto ou quando uma está parcialmente sobreposta.
+  for (const variant of variants) {
+    try {
+      const result = await Tesseract.recognize(variant.dataUrl, "eng", {
+        tessedit_char_whitelist: "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 ",
+        tessedit_pageseg_mode: "11"
+      });
+
+      const text = result?.data?.text || "";
+      if (text.trim()) {
+        texts.push(`[${variant.name}]\n${text}`);
+      }
+    } catch (error) {
+      console.warn(`Falha no OCR da região ${variant.name}`, error);
+    }
+  }
+
+  return texts.join("\n");
+}
+
+function loadImageFromFile(file) {
+  return new Promise((resolve, reject) => {
+    const image = new Image();
+    const url = URL.createObjectURL(file);
+
+    image.onload = () => {
+      URL.revokeObjectURL(url);
+      resolve(image);
+    };
+
+    image.onerror = () => {
+      URL.revokeObjectURL(url);
+      reject(new Error("Não foi possível carregar a imagem selecionada."));
+    };
+
+    image.src = url;
+  });
+}
+
+function buildStickerCodeImageVariants(image) {
+  const w = image.naturalWidth || image.width;
+  const h = image.naturalHeight || image.height;
+
+  const crops = [
+    { name: "imagem completa", x: 0, y: 0, w, h },
+    { name: "faixa superior", x: 0, y: 0, w, h: Math.floor(h * 0.48) },
+    { name: "lado direito superior", x: Math.floor(w * 0.42), y: 0, w: Math.floor(w * 0.58), h: Math.floor(h * 0.48) },
+    { name: "codigo superior direito", x: Math.floor(w * 0.48), y: Math.floor(h * 0.08), w: Math.floor(w * 0.44), h: Math.floor(h * 0.18) },
+    { name: "codigo meio direito", x: Math.floor(w * 0.48), y: Math.floor(h * 0.22), w: Math.floor(w * 0.44), h: Math.floor(h * 0.22) },
+    { name: "faixa de codigos direita", x: Math.floor(w * 0.40), y: Math.floor(h * 0.06), w: Math.floor(w * 0.56), h: Math.floor(h * 0.42) }
+  ];
+
+  const variants = [];
+
+  for (const crop of crops) {
+    variants.push(makeImageVariant(image, crop, false));
+    variants.push(makeImageVariant(image, crop, true));
+  }
+
+  return variants;
+}
+
+function makeImageVariant(image, crop, highContrast = false) {
+  const scale = highContrast ? 3 : 2;
+  const canvas = document.createElement("canvas");
+  canvas.width = Math.max(1, Math.floor(crop.w * scale));
+  canvas.height = Math.max(1, Math.floor(crop.h * scale));
+
+  const ctx = canvas.getContext("2d");
+  ctx.imageSmoothingEnabled = true;
+  ctx.drawImage(
+    image,
+    crop.x,
+    crop.y,
+    crop.w,
+    crop.h,
+    0,
+    0,
+    canvas.width,
+    canvas.height
+  );
+
+  if (highContrast) {
+    const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    const data = imgData.data;
+
+    for (let i = 0; i < data.length; i += 4) {
+      const gray = data[i] * 0.299 + data[i + 1] * 0.587 + data[i + 2] * 0.114;
+      const contrast = Math.max(0, Math.min(255, (gray - 128) * 1.8 + 128));
+      const threshold = contrast > 150 ? 255 : 0;
+
+      data[i] = threshold;
+      data[i + 1] = threshold;
+      data[i + 2] = threshold;
+    }
+
+    ctx.putImageData(imgData, 0, 0);
+  }
+
+  return {
+    name: `${crop.name}${highContrast ? " alto contraste" : ""}`,
+    dataUrl: canvas.toDataURL("image/png")
+  };
 }
 
 function loadTesseractIfNeeded() {
