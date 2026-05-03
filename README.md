@@ -191,3 +191,10 @@ Na aba **Álbum**, use o campo **Buscar país** para localizar rapidamente pelo 
 - Removida a coluna **Bandeira** dos PDFs.
 - O PDF do álbum agora mostra apenas **País**, **Álbum** e **Figurinhas 01 a 20**.
 - O PDF de repetidas agora mostra apenas **País**, **Figurinha**, **Quantidade** e **Repetidas extras**.
+
+
+## Correção definitiva da exportação
+- A exportação não gera mais PDF binário diretamente.
+- Agora abre um relatório A4 em nova aba e usa a impressão do navegador.
+- No iPhone/Safari, escolha compartilhar/imprimir e salve como PDF.
+- Isso evita o problema de página branca em exportações via canvas/PDF.
