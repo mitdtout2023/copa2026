@@ -626,6 +626,7 @@ button.pill {
   flex: 1 1 auto;
 }
 
+/* Correções de cabeçalho e rodapé */
 .app-title-row-right {
   display: flex;
   align-items: center;
@@ -633,12 +634,31 @@ button.pill {
   gap: 14px;
   width: 100%;
 }
+
 .app-title-row-right h1 {
   margin: 0;
 }
+
 .app-title-icon {
   flex: 0 0 auto;
 }
+
 .footer-logo {
   display: block;
+}
+
+.import-actions {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 12px;
+}
+
+.import-actions .primary {
+  width: 100%;
+}
+
+@media (max-width: 430px) {
+  .import-actions {
+    grid-template-columns: 1fr;
+  }
 }

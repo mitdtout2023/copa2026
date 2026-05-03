@@ -1,4 +1,4 @@
-const CACHE_NAME = "figurinhas-copa-2026-v15-fix-dup-logo";
+const CACHE_NAME = "figurinhas-copa-2026-v18-pdf-album-range";
 const APP_SHELL = [
   "./",
   "./index.html",

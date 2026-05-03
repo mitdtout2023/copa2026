@@ -117,13 +117,16 @@
           <p class="help-text">Você também pode colar o conteúdo manualmente abaixo. Não é necessário usar API Key nem enviar foto.</p>
           <label>
             Lista manual ou texto livre
-            <textarea id="manualText" rows="9" placeholder="Ex.: ARG 1, 4, 7, 8, 11, 17, 20&#10;BRA 18&#10;AUS 8, AUS 13, AUS 13"></textarea>
+            <textarea id="manualText" rows="9" placeholder="Ex.: ARG 01, 04, 07, 08, 11, 17, 20&#10;BRA 18&#10;AUS 08, AUS 13, AUS 13"></textarea>
           </label>
           <label class="inline-check">
             <input id="autoApply" type="checkbox" checked />
             Atualizar álbum automaticamente após a leitura
           </label>
-          <button id="parseManual" class="primary full-width">Ler texto e atualizar</button>
+          <div class="button-row import-actions">
+            <button id="parseManual" class="primary">Ler texto e atualizar</button>
+            <button id="clearManualText" class="ghost">Limpar</button>
+          </div>
         </article>
 
         <article class="form-card">

@@ -154,6 +154,7 @@ function setupEvents() {
   $("copyMissing").addEventListener("click", () => copyText(buildMissingText()));
   $("copyDuplicates").addEventListener("click", () => copyText(buildDuplicatesText()));
   $("parseManual").addEventListener("click", parseManualText);
+  $("clearManualText").addEventListener("click", clearManualText);
   $("applyParsed").addEventListener("click", () => applyParsedItems({ silent: false, allowRepeat: true }));
   $("clearParsed").addEventListener("click", clearParsed);
   $("exportJson").addEventListener("click", exportJson);
@@ -535,6 +536,15 @@ function parseStickerText(text) {
 }
 
 
+
+function clearManualText() {
+  $("manualText").value = "";
+  const fileInput = $("textFileInput");
+  if (fileInput) fileInput.value = "";
+  clearParsed();
+  $("manualText").focus();
+}
+
 async function importTextFile(event) {
   const file = event.target.files?.[0];
   if (!file) return;
@@ -796,7 +806,7 @@ function drawPdfHeader(ctx, canvasWidth, margin, pageNumber, totalPages) {
 
   ctx.fillStyle = "#0f172a";
   ctx.font = "700 34px Arial, sans-serif";
-  ctx.fillText("Copa 2026 - Controle de Figurinhas", margin, 52);
+  ctx.fillText("Copa 2026 - Álbum de Figurinhas", margin, 52);
 
   ctx.fillStyle = "#475569";
   ctx.font = "20px Arial, sans-serif";
@@ -809,9 +819,10 @@ function drawPdfHeader(ctx, canvasWidth, margin, pageNumber, totalPages) {
 }
 
 function drawPdfTable(ctx, countries, margin, startY, tableWidth, rowHeight) {
-  const flagW = 70;
-  const countryW = 230;
-  const stickersW = tableWidth - flagW - countryW;
+  const flagW = 64;
+  const countryW = 190;
+  const albumRangeW = 170;
+  const stickersW = tableWidth - flagW - countryW - albumRangeW;
 
   ctx.strokeStyle = "#cbd5e1";
   ctx.lineWidth = 1;
@@ -820,10 +831,11 @@ function drawPdfTable(ctx, countries, margin, startY, tableWidth, rowHeight) {
   ctx.fillRect(margin, startY, tableWidth, rowHeight);
 
   ctx.fillStyle = "#0f172a";
-  ctx.font = "700 18px Arial, sans-serif";
-  ctx.fillText("Bandeira", margin + 12, startY + 25);
-  ctx.fillText("País", margin + flagW + 12, startY + 25);
-  ctx.fillText("Figurinhas 01 a 20", margin + flagW + countryW + 12, startY + 25);
+  ctx.font = "700 16px Arial, sans-serif";
+  ctx.fillText("Bandeira", margin + 10, startY + 25);
+  ctx.fillText("País", margin + flagW + 10, startY + 25);
+  ctx.fillText("Álbum", margin + flagW + countryW + 10, startY + 25);
+  ctx.fillText("Figurinhas", margin + flagW + countryW + albumRangeW + 10, startY + 25);
 
   drawTableLine(ctx, margin, startY, tableWidth, rowHeight);
 
@@ -832,23 +844,33 @@ function drawPdfTable(ctx, countries, margin, startY, tableWidth, rowHeight) {
 
   for (const country of countries) {
     const meta = getCountryMeta(country);
-    const rowFill = Math.round((y - startY) / rowHeight) % 2 === 0 ? "#ffffff" : "#f8fafc";
+    const rowIndex = Math.round((y - startY) / rowHeight);
+    const rowFill = rowIndex % 2 === 0 ? "#ffffff" : "#f8fafc";
+
     ctx.fillStyle = rowFill;
     ctx.fillRect(margin, y, tableWidth, rowHeight);
 
+    // Coluna A: bandeira
     ctx.font = "24px Arial, Apple Color Emoji, Segoe UI Emoji, sans-serif";
     ctx.fillStyle = "#0f172a";
     ctx.fillText(meta.flag, margin + 18, y + 27);
 
-    ctx.font = "700 16px Arial, sans-serif";
-    ctx.fillText(meta.name, margin + flagW + 12, y + 17);
-    ctx.font = "12px Arial, sans-serif";
+    // Coluna B: nome do país + código
+    ctx.font = "700 14px Arial, sans-serif";
+    ctx.fillText(meta.name, margin + flagW + 10, y + 17);
+    ctx.font = "11px Arial, sans-serif";
     ctx.fillStyle = "#64748b";
-    ctx.fillText(country, margin + flagW + 12, y + 31);
+    ctx.fillText(country, margin + flagW + 10, y + 31);
 
+    // Coluna C: intervalo do álbum, exemplo BRA 01 até BRA 20
+    ctx.font = "700 12px Arial, sans-serif";
+    ctx.fillStyle = "#0f172a";
+    ctx.fillText(`${country} 01 até ${country} 20`, margin + flagW + countryW + 10, y + 24);
+
+    // Colunas seguintes: figurinhas do álbum com quantidade/status
     for (let number = 1; number <= STICKERS_PER_COUNTRY; number++) {
       const qty = state.inventory[country][number];
-      const x = margin + flagW + countryW + (number - 1) * codeWidth;
+      const x = margin + flagW + countryW + albumRangeW + (number - 1) * codeWidth;
       const code = `${country} ${String(number).padStart(2, "0")}`;
 
       ctx.fillStyle = qty === 0 ? "#fee2e2" : qty === 1 ? "#dcfce7" : "#fed7aa";
@@ -858,13 +880,13 @@ function drawPdfTable(ctx, countries, margin, startY, tableWidth, rowHeight) {
       ctx.strokeRect(x + 2, y + 5, codeWidth - 4, rowHeight - 10);
 
       ctx.fillStyle = "#0f172a";
-      ctx.font = "9px Arial, sans-serif";
+      ctx.font = "7.2px Arial, sans-serif";
       ctx.textAlign = "center";
-      ctx.fillText(code, x + codeWidth / 2, y + 21);
+      ctx.fillText(code, x + codeWidth / 2, y + 19);
 
       ctx.fillStyle = "#334155";
-      ctx.font = "8px Arial, sans-serif";
-      ctx.fillText(`qtd ${qty}`, x + codeWidth / 2, y + 32);
+      ctx.font = "7px Arial, sans-serif";
+      ctx.fillText(`qtd ${qty}`, x + codeWidth / 2, y + 31);
       ctx.textAlign = "left";
     }
 
@@ -876,8 +898,13 @@ function drawPdfTable(ctx, countries, margin, startY, tableWidth, rowHeight) {
   ctx.beginPath();
   ctx.moveTo(margin + flagW, startY);
   ctx.lineTo(margin + flagW, y);
+
   ctx.moveTo(margin + flagW + countryW, startY);
   ctx.lineTo(margin + flagW + countryW, y);
+
+  ctx.moveTo(margin + flagW + countryW + albumRangeW, startY);
+  ctx.lineTo(margin + flagW + countryW + albumRangeW, y);
+
   ctx.stroke();
 }
 

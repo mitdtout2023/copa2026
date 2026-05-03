@@ -148,6 +148,23 @@ Na aba **Álbum**, use o campo **Buscar país** para localizar rapidamente pelo 
 - Rodapé atualizado com **Criado por Marcelo Ferreira** e logo M@rstech.
 
 
-## Correções
-- Removido o ícone duplicado ao lado do título.
-- Logo do rodapé substituído pelo arquivo correto e adicionado também na raiz do app para compatibilidade.
+## Correção da contagem por importação
+- Corrigida leitura de códigos com zero à esquerda, como `BRA 01`.
+- Corrigida importação de arquivo `.txt` para substituir o texto anterior, evitando contagem duplicada.
+- Bloqueada reaplicação acidental do mesmo resultado importado.
+- Adicionado suporte a formatos como `BRA 12 x2` e `BRA 12 qtd 2`.
+- Mantida a contagem correta de duplicadas, por exemplo `AUS 13, AUS 13` soma 2 unidades.
+
+
+## Atualização: botão Limpar
+- Adicionado botão **Limpar** na aba **Importar texto**.
+- O botão apaga o texto colado/importado, limpa o resultado analisado e permite colar uma nova lista manualmente.
+
+
+## Atualização do PDF
+- A exportação em PDF agora inclui a coluna **Álbum**.
+- Cada país aparece com:
+  - bandeira;
+  - nome do país;
+  - intervalo do álbum, exemplo: `BRA 01 até BRA 20`;
+  - figurinhas de 01 a 20 com quantidade e status.
