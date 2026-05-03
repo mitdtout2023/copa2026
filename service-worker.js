@@ -1,4 +1,4 @@
-const CACHE_NAME = "figurinhas-copa-2026-v25-relatorio-repetidas-limpo";
+const CACHE_NAME = "figurinhas-copa-2026-v26-download-relatorios-html";
 const APP_SHELL = [
   "./",
   "./index.html",

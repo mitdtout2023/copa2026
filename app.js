@@ -753,9 +753,10 @@ async function importJson(event) {
 
 
 
+
 function exportPdfReport() {
-  const html = buildAlbumPrintHtml();
-  openPrintReport(html, "Copa 2026 - Álbum");
+  const reportHtml = buildAlbumReportHtml();
+  downloadReportFile(reportHtml, `copa-2026-relatorio-album-${new Date().toISOString().slice(0, 10)}.html`);
 }
 
 function exportDuplicatesPdfReport() {
@@ -765,31 +766,25 @@ function exportDuplicatesPdfReport() {
     return;
   }
 
-  const html = buildDuplicatesPrintHtml(rows);
-  openPrintReport(html, "Copa 2026 - Repetidas");
+  const reportHtml = buildDuplicatesReportHtml(rows);
+  downloadReportFile(reportHtml, `copa-2026-relatorio-repetidas-${new Date().toISOString().slice(0, 10)}.html`);
 }
 
-function openPrintReport(reportHtml, title) {
-  const printWindow = window.open("", "_blank");
+function downloadReportFile(reportHtml, filename) {
+  const blob = new Blob([reportHtml], { type: "text/html;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
 
-  if (!printWindow) {
-    alert("O navegador bloqueou a abertura do relatório. Permita pop-ups para este site e tente novamente.");
-    return;
-  }
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
 
-  printWindow.document.open();
-  printWindow.document.write(reportHtml);
-  printWindow.document.close();
-
-  // Abre automaticamente a opção de impressão/salvamento do navegador.
-  // No iPhone: Compartilhar/Imprimir > Salvar em Arquivos ou gerar PDF.
-  setTimeout(() => {
-    printWindow.focus();
-    printWindow.print();
-  }, 700);
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
-function buildAlbumPrintHtml() {
+function buildAlbumReportHtml() {
   const summary = getSummary();
 
   const rows = COUNTRIES.map((country) => {
@@ -808,32 +803,30 @@ function buildAlbumPrintHtml() {
         <td class="country-cell">
           <strong>${escapeHtml(meta.name)} (${country})</strong>
         </td>
-        <td class="album-range">${country} 01 até ${country} 20</td>
         ${cells.join("")}
       </tr>`;
   }).join("");
 
-  return buildPrintDocument({
+  return buildReportDocument({
     title: "Copa 2026 - Álbum de Figurinhas",
-    summary: `Total no álbum: ${summary.ownedTypes}/${TOTAL_STICKERS} | Faltantes: ${summary.missing} | Tipos repetidos: ${summary.duplicateTypes}`,
+    summary: `Total no álbum: ${summary.ownedTypes}/${TOTAL_STICKERS} | Faltantes: ${summary.missing}`,
     body: `
       <table class="album-table">
         <thead>
           <tr>
             <th>País</th>
-            <th>Álbum</th>
             ${Array.from({ length: STICKERS_PER_COUNTRY }, (_, index) => `<th>${String(index + 1).padStart(2, "0")}</th>`).join("")}
           </tr>
         </thead>
         <tbody>${rows}</tbody>
       </table>
-    `
+    `,
+    hideHeaderCredit: false,
+    hideLegend: false
   });
 }
 
-function buildDuplicatesPrintHtml(rows) {
-  const summary = getSummary();
-
+function buildDuplicatesReportHtml(rows) {
   const tableRows = rows.map((row) => {
     const meta = getCountryMeta(row.country);
     return `
@@ -844,7 +837,7 @@ function buildDuplicatesPrintHtml(rows) {
       </tr>`;
   }).join("");
 
-  return buildPrintDocument({
+  return buildReportDocument({
     title: "Copa 2026 - Figurinhas Repetidas",
     summary: "",
     body: `
@@ -863,6 +856,249 @@ function buildDuplicatesPrintHtml(rows) {
     hideLegend: true
   });
 }
+
+function buildReportDocument({ title, summary, body, hideHeaderCredit = false, hideLegend = false }) {
+  return `<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>${escapeHtml(title)}</title>
+  <style>
+    @page {
+      size: A4 portrait;
+      margin: 9mm;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      color: #0f172a;
+      font-family: Arial, Helvetica, sans-serif;
+      background: #ffffff;
+    }
+
+    .page {
+      background: #ffffff;
+      width: 100%;
+    }
+
+    header {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: flex-start;
+      margin-bottom: 10px;
+      border-bottom: 1px solid #cbd5e1;
+      padding-bottom: 8px;
+    }
+
+    h1 {
+      font-size: 17px;
+      margin: 0 0 4px;
+    }
+
+    .meta {
+      font-size: 10px;
+      color: #475569;
+      line-height: 1.35;
+    }
+
+    .credit {
+      text-align: right;
+      font-size: 10px;
+      font-weight: 700;
+      color: #0f172a;
+      white-space: nowrap;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      page-break-inside: auto;
+    }
+
+    thead {
+      display: table-header-group;
+    }
+
+    tr {
+      page-break-inside: avoid;
+      page-break-after: auto;
+    }
+
+    th {
+      background: #e2e8f0;
+      color: #0f172a;
+      border: 1px solid #cbd5e1;
+      padding: 4px;
+      font-size: 7px;
+      text-align: center;
+    }
+
+    td {
+      border: 1px solid #cbd5e1;
+      padding: 3px;
+      font-size: 7px;
+      vertical-align: middle;
+    }
+
+    .country-cell {
+      width: 86px;
+      font-size: 7px;
+    }
+
+    .sticker-cell {
+      width: 23px;
+      text-align: center;
+      line-height: 1.1;
+      padding: 2px 1px;
+    }
+
+    .sticker-cell strong {
+      display: block;
+      font-size: 5.8px;
+      white-space: nowrap;
+      margin-bottom: 1px;
+    }
+
+    .sticker-cell span {
+      display: block;
+      font-size: 5.8px;
+      color: #334155;
+      white-space: nowrap;
+    }
+
+    .missing {
+      background: #fee2e2;
+      border-color: #ef4444;
+    }
+
+    .owned {
+      background: #dcfce7;
+      border-color: #22c55e;
+    }
+
+    .duplicate {
+      background: #fed7aa;
+      border-color: #ea580c;
+    }
+
+    .duplicates-table th,
+    .duplicates-table td {
+      font-size: 10px;
+      padding: 6px;
+      text-align: left;
+    }
+
+    .legend {
+      margin-top: 8px;
+      font-size: 9px;
+      color: #475569;
+    }
+
+    footer {
+      margin-top: 10px;
+      font-size: 9px;
+      color: #475569;
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      border-top: 1px solid #cbd5e1;
+      padding-top: 6px;
+    }
+
+    @media screen {
+      body {
+        padding: 16px;
+        background: #f8fafc;
+      }
+
+      .page {
+        background: #ffffff;
+        max-width: 210mm;
+        margin: 0 auto;
+        padding: 9mm;
+        box-shadow: 0 10px 30px rgba(15, 23, 42, .12);
+      }
+
+      .screen-help {
+        display: block;
+        margin: 0 auto 12px;
+        max-width: 210mm;
+        color: #475569;
+        font-size: 13px;
+      }
+    }
+
+    @media print {
+      .screen-help {
+        display: none;
+      }
+
+      .page {
+        box-shadow: none;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="screen-help">Arquivo de relatório salvo. Para transformar em PDF, abra este arquivo e use a opção de impressão/salvar como PDF.</div>
+  <div class="page">
+    <header>
+      <div>
+        <h1>${escapeHtml(title)}</h1>
+        <div class="meta">${summary ? `${escapeHtml(summary)}<br>` : ""}Gerado em ${escapeHtml(new Date().toLocaleString("pt-BR"))}</div>
+      </div>
+      ${hideHeaderCredit ? "" : '<div class="credit">Criado por Marcelo Ferreira</div>'}
+    </header>
+
+    ${body}
+
+    ${hideLegend ? "" : '<div class="legend">Legenda: vermelho = faltante | verde = Total no álbum | laranja = repetida</div>'}
+
+    <footer>
+      <span>Copa 2026</span>
+      <strong>Criado por Marcelo Ferreira</strong>
+    </footer>
+  </div>
+</body>
+</html>`;
+}
+
+function getDuplicateRows() {
+  const rows = [];
+
+  for (const country of COUNTRIES) {
+    for (let number = 1; number <= STICKERS_PER_COUNTRY; number++) {
+      const qty = state.inventory[country][number] || 0;
+      if (qty > 1) {
+        rows.push({
+          country,
+          number,
+          qty,
+          extra: qty - 1,
+          code: `${country} ${String(number).padStart(2, "0")}`
+        });
+      }
+    }
+  }
+
+  return rows;
+}
+
+function escapeHtml(value) {
+  return String(value)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
 
 function buildPrintDocument({ title, summary, body, hideHeaderCredit = false, hideLegend = false }) {
   return `<!doctype html>
@@ -1078,36 +1314,10 @@ function buildPrintDocument({ title, summary, body, hideHeaderCredit = false, hi
 </html>`;
 }
 
-function escapeHtml(value) {
-  return String(value)
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#039;");
-}
 
 
-function getDuplicateRows() {
-  const rows = [];
 
-  for (const country of COUNTRIES) {
-    for (let number = 1; number <= STICKERS_PER_COUNTRY; number++) {
-      const qty = state.inventory[country][number] || 0;
-      if (qty > 1) {
-        rows.push({
-          country,
-          number,
-          qty,
-          extra: qty - 1,
-          code: `${country} ${String(number).padStart(2, "0")}`
-        });
-      }
-    }
-  }
 
-  return rows;
-}
 
 
 

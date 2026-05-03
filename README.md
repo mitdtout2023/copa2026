@@ -212,3 +212,10 @@ Na aba **Álbum**, use o campo **Buscar país** para localizar rapidamente pelo 
 - Removido `Criado por Marcelo Ferreira` do cabeçalho do relatório repetidas.
 - Removida a legenda de cores do relatório repetidas.
 - Mantido o título, data/hora de geração e a tabela de repetidas.
+
+
+## Atualização dos relatórios
+- O botão **Relatório álbum** agora salva um arquivo de relatório diretamente, sem abrir impressão.
+- O botão **Relatório repetidas** agora salva um arquivo de relatório diretamente, sem abrir impressão.
+- No relatório álbum, removida a coluna **Álbum**.
+- No relatório álbum, removido o item **Tipos repetidos** do resumo.
