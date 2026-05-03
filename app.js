@@ -749,208 +749,96 @@ async function importJson(event) {
 }
 
 
-async function exportPdfReport() {
-  const pdfBytes = await createA4StickerReportPdf();
+
+function exportPdfReport() {
+  const pdfBytes = createAlbumA4Pdf();
   const blob = new Blob([pdfBytes], { type: "application/pdf" });
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
-  a.download = `copa-2026-relatorio-a4-${new Date().toISOString().slice(0, 10)}.pdf`;
+  a.download = `copa-2026-album-a4-${new Date().toISOString().slice(0, 10)}.pdf`;
   document.body.appendChild(a);
   a.click();
   a.remove();
   URL.revokeObjectURL(url);
 }
 
-async function createA4StickerReportPdf() {
-  const pageWidthPt = 595.28;
-  const pageHeightPt = 841.89;
-  const canvasWidth = 1240;
-  const canvasHeight = 1754;
-  const margin = 48;
-  const rowHeight = 38;
-  const headerHeight = 118;
-  const footerHeight = 44;
-  const usableHeight = canvasHeight - headerHeight - footerHeight;
-  const rowsPerPage = Math.floor(usableHeight / rowHeight);
+function createAlbumA4Pdf() {
+  const pageWidth = 595.28;
+  const pageHeight = 841.89;
+  const marginX = 26;
+  const marginTop = 802;
+  const rowHeight = 20;
+  const headerGap = 60;
+  const rowsPerPage = 32;
 
-  const pages = [];
-  for (let i = 0; i < COUNTRIES.length; i += rowsPerPage) {
-    pages.push(COUNTRIES.slice(i, i + rowsPerPage));
+  const countryPages = [];
+  for (let index = 0; index < COUNTRIES.length; index += rowsPerPage) {
+    countryPages.push(COUNTRIES.slice(index, index + rowsPerPage));
   }
 
-  const pageImages = [];
-  for (let pageIndex = 0; pageIndex < pages.length; pageIndex++) {
-    const canvas = document.createElement("canvas");
-    canvas.width = canvasWidth;
-    canvas.height = canvasHeight;
-    const ctx = canvas.getContext("2d");
-
-    ctx.fillStyle = "#ffffff";
-    ctx.fillRect(0, 0, canvasWidth, canvasHeight);
-
-    drawPdfHeader(ctx, canvasWidth, margin, pageIndex + 1, pages.length);
-    drawPdfTable(ctx, pages[pageIndex], margin, headerHeight, canvasWidth - margin * 2, rowHeight);
-    drawPdfFooter(ctx, canvasWidth, canvasHeight, margin);
-
-    const jpegDataUrl = canvas.toDataURL("image/jpeg", 0.92);
-    const jpegBytes = dataUrlToBytes(jpegDataUrl);
-    pageImages.push({ bytes: jpegBytes, width: canvasWidth, height: canvasHeight });
-  }
-
-  return createPdfFromJpegs(pageImages, pageWidthPt, pageHeightPt);
-}
-
-function drawPdfHeader(ctx, canvasWidth, margin, pageNumber, totalPages) {
-  const summary = getSummary();
-
-  ctx.fillStyle = "#0f172a";
-  ctx.font = "700 34px Arial, sans-serif";
-  ctx.fillText("Copa 2026 - Álbum de Figurinhas", margin, 52);
-
-  ctx.fillStyle = "#475569";
-  ctx.font = "20px Arial, sans-serif";
-  ctx.fillText(`Gerado em ${new Date().toLocaleString("pt-BR")}`, margin, 84);
-
-  ctx.textAlign = "right";
-  ctx.fillText(`Página ${pageNumber} de ${totalPages}`, canvasWidth - margin, 52);
-  ctx.fillText(`Álbum ${summary.ownedTypes}/${TOTAL_STICKERS} | Faltantes ${summary.missing} | Repetidas extras ${summary.duplicateExtras}`, canvasWidth - margin, 84);
-  ctx.textAlign = "left";
-}
-
-function drawPdfTable(ctx, countries, margin, startY, tableWidth, rowHeight) {
-  const flagW = 64;
-  const countryW = 190;
-  const albumRangeW = 170;
-  const stickersW = tableWidth - flagW - countryW - albumRangeW;
-
-  ctx.strokeStyle = "#cbd5e1";
-  ctx.lineWidth = 1;
-
-  ctx.fillStyle = "#e2e8f0";
-  ctx.fillRect(margin, startY, tableWidth, rowHeight);
-
-  ctx.fillStyle = "#0f172a";
-  ctx.font = "700 16px Arial, sans-serif";
-  ctx.fillText("Bandeira", margin + 10, startY + 25);
-  ctx.fillText("País", margin + flagW + 10, startY + 25);
-  ctx.fillText("Álbum", margin + flagW + countryW + 10, startY + 25);
-  ctx.fillText("Figurinhas", margin + flagW + countryW + albumRangeW + 10, startY + 25);
-
-  drawTableLine(ctx, margin, startY, tableWidth, rowHeight);
-
-  const codeWidth = stickersW / STICKERS_PER_COUNTRY;
-  let y = startY + rowHeight;
-
-  for (const country of countries) {
-    const meta = getCountryMeta(country);
-    const rowIndex = Math.round((y - startY) / rowHeight);
-    const rowFill = rowIndex % 2 === 0 ? "#ffffff" : "#f8fafc";
-
-    ctx.fillStyle = rowFill;
-    ctx.fillRect(margin, y, tableWidth, rowHeight);
-
-    // Coluna A: bandeira
-    ctx.font = "24px Arial, Apple Color Emoji, Segoe UI Emoji, sans-serif";
-    ctx.fillStyle = "#0f172a";
-    ctx.fillText(meta.flag, margin + 18, y + 27);
-
-    // Coluna B: nome do país + código
-    ctx.font = "700 14px Arial, sans-serif";
-    ctx.fillText(meta.name, margin + flagW + 10, y + 17);
-    ctx.font = "11px Arial, sans-serif";
-    ctx.fillStyle = "#64748b";
-    ctx.fillText(country, margin + flagW + 10, y + 31);
-
-    // Coluna C: intervalo do álbum, exemplo BRA 01 até BRA 20
-    ctx.font = "700 12px Arial, sans-serif";
-    ctx.fillStyle = "#0f172a";
-    ctx.fillText(`${country} 01 até ${country} 20`, margin + flagW + countryW + 10, y + 24);
-
-    // Colunas seguintes: figurinhas do álbum com quantidade/status
-    for (let number = 1; number <= STICKERS_PER_COUNTRY; number++) {
-      const qty = state.inventory[country][number];
-      const x = margin + flagW + countryW + albumRangeW + (number - 1) * codeWidth;
-      const code = `${country} ${String(number).padStart(2, "0")}`;
-
-      ctx.fillStyle = qty === 0 ? "#fee2e2" : qty === 1 ? "#dcfce7" : "#fed7aa";
-      ctx.fillRect(x + 2, y + 5, codeWidth - 4, rowHeight - 10);
-
-      ctx.strokeStyle = qty === 0 ? "#ef4444" : qty === 1 ? "#22c55e" : "#ea580c";
-      ctx.strokeRect(x + 2, y + 5, codeWidth - 4, rowHeight - 10);
-
-      ctx.fillStyle = "#0f172a";
-      ctx.font = "7.2px Arial, sans-serif";
-      ctx.textAlign = "center";
-      ctx.fillText(code, x + codeWidth / 2, y + 19);
-
-      ctx.fillStyle = "#334155";
-      ctx.font = "7px Arial, sans-serif";
-      ctx.fillText(`qtd ${qty}`, x + codeWidth / 2, y + 31);
-      ctx.textAlign = "left";
-    }
-
-    drawTableLine(ctx, margin, y, tableWidth, rowHeight);
-    y += rowHeight;
-  }
-
-  ctx.strokeStyle = "#cbd5e1";
-  ctx.beginPath();
-  ctx.moveTo(margin + flagW, startY);
-  ctx.lineTo(margin + flagW, y);
-
-  ctx.moveTo(margin + flagW + countryW, startY);
-  ctx.lineTo(margin + flagW + countryW, y);
-
-  ctx.moveTo(margin + flagW + countryW + albumRangeW, startY);
-  ctx.lineTo(margin + flagW + countryW + albumRangeW, y);
-
-  ctx.stroke();
-}
-
-function drawTableLine(ctx, x, y, width, height) {
-  ctx.strokeStyle = "#cbd5e1";
-  ctx.strokeRect(x, y, width, height);
-}
-
-function drawPdfFooter(ctx, canvasWidth, canvasHeight, margin) {
-  ctx.fillStyle = "#64748b";
-  ctx.font = "16px Arial, sans-serif";
-  ctx.fillText("Legenda: vermelho = faltante | verde = Total no álbum | laranja = repetida", margin, canvasHeight - 28);
-
-  ctx.textAlign = "right";
-  ctx.font = "700 16px Arial, sans-serif";
-  ctx.fillText("Criado por Marcelo Ferreira", canvasWidth - margin, canvasHeight - 28);
-  ctx.textAlign = "left";
-}
-
-function dataUrlToBytes(dataUrl) {
-  const base64 = dataUrl.split(",")[1];
-  const binary = atob(base64);
-  const bytes = new Uint8Array(binary.length);
-  for (let i = 0; i < binary.length; i++) {
-    bytes[i] = binary.charCodeAt(i);
-  }
-  return bytes;
-}
-
-function createPdfFromJpegs(images, pageWidth, pageHeight) {
   const objects = [null];
   const addObject = (value) => {
     objects.push(value);
     return objects.length - 1;
   };
 
-  addObject("");
-  addObject("");
+  addObject(""); // catalog placeholder
+  addObject(""); // pages placeholder
+  addObject("<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>");
+  addObject("<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold >>");
 
   const pageRefs = [];
 
-  images.forEach((image, index) => {
-    const imgRef = addObject(`<< /Type /XObject /Subtype /Image /Width ${image.width} /Height ${image.height} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length ${image.bytes.length} >>\nstream\n${bytesToBinaryString(image.bytes)}\nendstream`);
-    const content = `q\n${pageWidth} 0 0 ${pageHeight} 0 0 cm\n/Im${index + 1} Do\nQ`;
-    const contentRef = addObject(`<< /Length ${content.length} >>\nstream\n${content}\nendstream`);
-    const pageRef = addObject(`<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${pageWidth} ${pageHeight}] /Resources << /XObject << /Im${index + 1} ${imgRef} 0 R >> >> >> /Contents ${contentRef} 0 R >>`);
+  countryPages.forEach((countries, pageIndex) => {
+    const commands = [];
+    commands.push(textCommand("Copa 2026 - Album de Figurinhas", marginX, marginTop, 15, "F2"));
+    commands.push(textCommand(`Gerado em ${new Date().toLocaleString("pt-BR")} | Pagina ${pageIndex + 1} de ${countryPages.length}`, marginX, marginTop - 18, 8, "F1"));
+
+    const summary = getSummary();
+    commands.push(textCommand(`Total no album: ${summary.ownedTypes}/${TOTAL_STICKERS} | Faltantes: ${summary.missing} | Tipos repetidos: ${summary.duplicateTypes}`, marginX, marginTop - 32, 8, "F1"));
+
+    let y = marginTop - headerGap;
+
+    commands.push(rectCommand(marginX, y - 3, pageWidth - marginX * 2, 17, "0.90 0.94 0.98"));
+    commands.push(textCommand("Bandeira", marginX + 4, y + 2, 7, "F2"));
+    commands.push(textCommand("Pais", marginX + 52, y + 2, 7, "F2"));
+    commands.push(textCommand("Album", marginX + 145, y + 2, 7, "F2"));
+    commands.push(textCommand("Figurinhas 01 a 20", marginX + 252, y + 2, 7, "F2"));
+    y -= rowHeight;
+
+    for (const country of countries) {
+      const meta = getCountryMeta(country);
+      const rowColor = ((Math.round((marginTop - headerGap - y) / rowHeight)) % 2 === 0) ? "1 1 1" : "0.97 0.98 1";
+      commands.push(rectCommand(marginX, y - 3, pageWidth - marginX * 2, 17, rowColor));
+
+      const flagText = getFlagFallback(country);
+      commands.push(textCommand(flagText, marginX + 4, y + 2, 7, "F1"));
+      commands.push(textCommand(sanitizePdfText(`${meta.name} (${country})`), marginX + 52, y + 2, 7, "F2"));
+      commands.push(textCommand(`${country} 01 ate ${country} 20`, marginX + 145, y + 2, 7, "F1"));
+
+      let x = marginX + 252;
+      const cellWidth = 15.5;
+
+      for (let number = 1; number <= STICKERS_PER_COUNTRY; number++) {
+        const qty = state.inventory[country][number] || 0;
+        const fill = qty === 0 ? "0.99 0.82 0.82" : qty === 1 ? "0.78 0.95 0.82" : "0.99 0.73 0.45";
+        commands.push(rectCommand(x, y - 4, cellWidth - 1, 17, fill));
+        commands.push(textCommand(String(number).padStart(2, "0"), x + 2.2, y + 3, 5, "F2"));
+        commands.push(textCommand(String(qty), x + 5.2, y - 4, 5, "F1"));
+        x += cellWidth;
+      }
+
+      y -= rowHeight;
+    }
+
+    commands.push(textCommand("Legenda: vermelho = faltante | verde = Total no album | laranja = repetida", marginX, 30, 8, "F1"));
+    commands.push(textCommand("Criado por Marcelo Ferreira", 430, 30, 8, "F2"));
+
+    const content = commands.join("\n");
+    const contentLength = new TextEncoder().encode(content).length;
+    const contentRef = addObject(`<< /Length ${contentLength} >>\nstream\n${content}\nendstream`);
+    const pageRef = addObject(`<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${pageWidth} ${pageHeight}] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Contents ${contentRef} 0 R >>`);
     pageRefs.push(pageRef);
   });
 
@@ -959,13 +847,14 @@ function createPdfFromJpegs(images, pageWidth, pageHeight) {
 
   let pdf = "%PDF-1.4\n";
   const offsets = [0];
+  const encoder = new TextEncoder();
 
   for (let index = 1; index < objects.length; index++) {
-    offsets[index] = byteLength(pdf);
+    offsets[index] = encoder.encode(pdf).length;
     pdf += `${index} 0 obj\n${objects[index]}\nendobj\n`;
   }
 
-  const xrefOffset = byteLength(pdf);
+  const xrefOffset = encoder.encode(pdf).length;
   pdf += `xref\n0 ${objects.length}\n`;
   pdf += "0000000000 65535 f \n";
   for (let index = 1; index < objects.length; index++) {
@@ -973,32 +862,41 @@ function createPdfFromJpegs(images, pageWidth, pageHeight) {
   }
   pdf += `trailer\n<< /Size ${objects.length} /Root 1 0 R >>\nstartxref\n${xrefOffset}\n%%EOF`;
 
-  return binaryStringToUint8Array(pdf);
+  return encoder.encode(pdf);
 }
 
-function bytesToBinaryString(bytes) {
-  let result = "";
-  const chunkSize = 8192;
-  for (let i = 0; i < bytes.length; i += chunkSize) {
-    result += String.fromCharCode(...bytes.slice(i, i + chunkSize));
-  }
-  return result;
+function getFlagFallback(country) {
+  const map = {
+    ALG: "DZ", ARG: "AR", AUS: "AU", BEL: "BE", BIH: "BA", BRA: "BR",
+    CAN: "CA", CIV: "CI", COL: "CO", CRO: "HR", ECU: "EC", ENG: "ENG",
+    ESP: "ES", FRA: "FR", FWG: "FWC", GER: "DE", GHA: "GH", IRN: "IR",
+    JPN: "JP", KOR: "KR", KSA: "SA", MAR: "MA", MEX: "MX", NED: "NL",
+    NOR: "NO", PAN: "PA", POR: "PT", QAT: "QA", RSA: "ZA", SCO: "SCO",
+    SEN: "SN", SUI: "CH", TUN: "TN", URU: "UY", USA: "US", UZB: "UZ"
+  };
+  return map[country] || country;
 }
 
-function binaryStringToUint8Array(binary) {
-  const bytes = new Uint8Array(binary.length);
-  for (let i = 0; i < binary.length; i++) {
-    bytes[i] = binary.charCodeAt(i) & 0xff;
-  }
-  return bytes;
+function rectCommand(x, y, width, height, rgb) {
+  return `q ${rgb} rg ${x} ${y} ${width} ${height} re f Q`;
 }
 
-function byteLength(text) {
-  let count = 0;
-  for (let i = 0; i < text.length; i++) {
-    count += text.charCodeAt(i) > 255 ? 2 : 1;
-  }
-  return count;
+function textCommand(text, x, y, fontSize, font = "F1") {
+  return `BT /${font} ${fontSize} Tf ${x} ${y} Td (${escapePdfText(text)}) Tj ET`;
+}
+
+function escapePdfText(text) {
+  return String(text).replace(/\\/g, "\\\\").replace(/\(/g, "\\(").replace(/\)/g, "\\)");
+}
+
+function sanitizePdfText(text) {
+  return String(text)
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[–—]/g, "-")
+    .replace(/[“”]/g, '"')
+    .replace(/[‘’]/g, "'")
+    .replace(/[^\x20-\x7E]/g, " ");
 }
 
 

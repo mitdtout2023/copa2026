@@ -168,3 +168,9 @@ Na aba **Álbum**, use o campo **Buscar país** para localizar rapidamente pelo 
   - nome do país;
   - intervalo do álbum, exemplo: `BRA 01 até BRA 20`;
   - figurinhas de 01 a 20 com quantidade e status.
+
+
+## Correção do PDF em branco
+- Substituída a rotina de PDF baseada em canvas/imagem por uma rotina A4 com texto vetorial.
+- Mantém bandeira como sigla visual, nome do país e intervalo do álbum, exemplo `BRA 01 ate BRA 20`.
+- Mantém células 01 a 20 com quantidade e status por cor.
