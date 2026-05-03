@@ -174,3 +174,9 @@ Na aba **Álbum**, use o campo **Buscar país** para localizar rapidamente pelo 
 - Substituída a rotina de PDF baseada em canvas/imagem por uma rotina A4 com texto vetorial.
 - Mantém bandeira como sigla visual, nome do país e intervalo do álbum, exemplo `BRA 01 ate BRA 20`.
 - Mantém células 01 a 20 com quantidade e status por cor.
+
+
+## Atualização do PDF
+- A coluna **Bandeira** agora tenta renderizar o ícone visual da bandeira no PDF.
+- Adicionada opção **PDF repetidas** para exportar somente as figurinhas repetidas.
+- O PDF de repetidas mostra bandeira, país, figurinha, quantidade total e quantidade extra.

@@ -662,3 +662,9 @@ button.pill {
     grid-template-columns: 1fr;
   }
 }
+
+@media (max-width: 520px) {
+  .button-row {
+    flex-wrap: wrap;
+  }
+}

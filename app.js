@@ -159,6 +159,7 @@ function setupEvents() {
   $("clearParsed").addEventListener("click", clearParsed);
   $("exportJson").addEventListener("click", exportJson);
   $("exportPdf").addEventListener("click", exportPdfReport);
+  $("exportDuplicatesPdf").addEventListener("click", exportDuplicatesPdfReport);
   $("importJson").addEventListener("change", importJson);
   $("resetAll").addEventListener("click", resetAll);
   $("textFileInput").addEventListener("change", importTextFile);
@@ -750,119 +751,403 @@ async function importJson(event) {
 
 
 
-function exportPdfReport() {
-  const pdfBytes = createAlbumA4Pdf();
+
+async function exportPdfReport() {
+  const pages = buildAlbumPdfPages();
+  const pdfBytes = await createA4CanvasPdf(pages);
+  downloadPdfBytes(pdfBytes, `copa-2026-album-a4-${new Date().toISOString().slice(0, 10)}.pdf`);
+}
+
+async function exportDuplicatesPdfReport() {
+  const duplicateRows = getDuplicateRows();
+  if (!duplicateRows.length) {
+    alert("Não há figurinhas repetidas para exportar.");
+    return;
+  }
+
+  const pages = buildDuplicatesPdfPages(duplicateRows);
+  const pdfBytes = await createA4CanvasPdf(pages);
+  downloadPdfBytes(pdfBytes, `copa-2026-repetidas-a4-${new Date().toISOString().slice(0, 10)}.pdf`);
+}
+
+function downloadPdfBytes(pdfBytes, filename) {
   const blob = new Blob([pdfBytes], { type: "application/pdf" });
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
-  a.download = `copa-2026-album-a4-${new Date().toISOString().slice(0, 10)}.pdf`;
+  a.download = filename;
   document.body.appendChild(a);
   a.click();
   a.remove();
   URL.revokeObjectURL(url);
 }
 
-function createAlbumA4Pdf() {
-  const pageWidth = 595.28;
-  const pageHeight = 841.89;
-  const marginX = 26;
-  const marginTop = 802;
-  const rowHeight = 20;
-  const headerGap = 60;
-  const rowsPerPage = 32;
+function buildAlbumPdfPages() {
+  const rowsPerPage = 25;
+  const pages = [];
 
-  const countryPages = [];
   for (let index = 0; index < COUNTRIES.length; index += rowsPerPage) {
-    countryPages.push(COUNTRIES.slice(index, index + rowsPerPage));
+    const countries = COUNTRIES.slice(index, index + rowsPerPage);
+    pages.push((ctx, metrics, pageNumber, totalPages) => {
+      drawPdfBaseHeader(ctx, metrics, "Copa 2026 - Álbum de Figurinhas", pageNumber, totalPages);
+      drawAlbumPdfTable(ctx, countries, metrics);
+      drawPdfFooter(ctx, metrics);
+    });
   }
 
-  const objects = [null];
-  const addObject = (value) => {
-    objects.push(value);
-    return objects.length - 1;
+  return pages;
+}
+
+function buildDuplicatesPdfPages(rows) {
+  const rowsPerPage = 30;
+  const pages = [];
+
+  for (let index = 0; index < rows.length; index += rowsPerPage) {
+    const pageRows = rows.slice(index, index + rowsPerPage);
+    pages.push((ctx, metrics, pageNumber, totalPages) => {
+      drawPdfBaseHeader(ctx, metrics, "Copa 2026 - Figurinhas Repetidas", pageNumber, totalPages);
+      drawDuplicatesPdfTable(ctx, pageRows, metrics);
+      drawPdfFooter(ctx, metrics);
+    });
+  }
+
+  return pages;
+}
+
+function getDuplicateRows() {
+  const rows = [];
+
+  for (const country of COUNTRIES) {
+    for (let number = 1; number <= STICKERS_PER_COUNTRY; number++) {
+      const qty = state.inventory[country][number] || 0;
+      if (qty > 1) {
+        rows.push({
+          country,
+          number,
+          qty,
+          extra: qty - 1,
+          code: `${country} ${String(number).padStart(2, "0")}`
+        });
+      }
+    }
+  }
+
+  return rows;
+}
+
+function drawPdfBaseHeader(ctx, metrics, title, pageNumber, totalPages) {
+  const { margin, width } = metrics;
+  const summary = getSummary();
+
+  ctx.fillStyle = "#ffffff";
+  ctx.fillRect(0, 0, metrics.width, metrics.height);
+
+  ctx.fillStyle = "#0f172a";
+  ctx.font = "700 28px Arial, sans-serif";
+  ctx.fillText(title, margin, 52);
+
+  ctx.fillStyle = "#475569";
+  ctx.font = "16px Arial, sans-serif";
+  ctx.fillText(`Gerado em ${new Date().toLocaleString("pt-BR")}`, margin, 78);
+
+  ctx.textAlign = "right";
+  ctx.fillText(`Página ${pageNumber} de ${totalPages}`, width - margin, 52);
+  ctx.fillText(`Total no álbum: ${summary.ownedTypes}/${TOTAL_STICKERS} | Faltantes: ${summary.missing} | Tipos repetidos: ${summary.duplicateTypes}`, width - margin, 78);
+  ctx.textAlign = "left";
+}
+
+function drawAlbumPdfTable(ctx, countries, metrics) {
+  const { margin, width } = metrics;
+  const startY = 112;
+  const rowHeight = 34;
+  const tableWidth = width - margin * 2;
+  const flagW = 72;
+  const countryW = 185;
+  const albumW = 160;
+  const stickersW = tableWidth - flagW - countryW - albumW;
+  const codeW = stickersW / STICKERS_PER_COUNTRY;
+
+  drawHeaderRow(ctx, margin, startY, tableWidth, rowHeight, [
+    { text: "Bandeira", x: margin + 10 },
+    { text: "País", x: margin + flagW + 10 },
+    { text: "Álbum", x: margin + flagW + countryW + 10 },
+    { text: "Figurinhas 01 a 20", x: margin + flagW + countryW + albumW + 10 }
+  ]);
+
+  let y = startY + rowHeight;
+
+  countries.forEach((country, rowIndex) => {
+    const meta = getCountryMeta(country);
+
+    ctx.fillStyle = rowIndex % 2 === 0 ? "#ffffff" : "#f8fafc";
+    ctx.fillRect(margin, y, tableWidth, rowHeight);
+
+    ctx.strokeStyle = "#cbd5e1";
+    ctx.strokeRect(margin, y, tableWidth, rowHeight);
+
+    // Coluna Bandeira: usa emoji/ícone de bandeira renderizado no canvas.
+    ctx.font = "24px Apple Color Emoji, Segoe UI Emoji, Noto Color Emoji, Arial, sans-serif";
+    ctx.fillStyle = "#0f172a";
+    ctx.fillText(meta.flag || getFlagFallback(country), margin + 18, y + 24);
+
+    ctx.font = "700 13px Arial, sans-serif";
+    ctx.fillStyle = "#0f172a";
+    ctx.fillText(meta.name, margin + flagW + 10, y + 15);
+
+    ctx.font = "10px Arial, sans-serif";
+    ctx.fillStyle = "#64748b";
+    ctx.fillText(country, margin + flagW + 10, y + 28);
+
+    ctx.font = "700 11px Arial, sans-serif";
+    ctx.fillStyle = "#0f172a";
+    ctx.fillText(`${country} 01 até ${country} 20`, margin + flagW + countryW + 10, y + 21);
+
+    for (let number = 1; number <= STICKERS_PER_COUNTRY; number++) {
+      const qty = state.inventory[country][number] || 0;
+      const x = margin + flagW + countryW + albumW + (number - 1) * codeW;
+      const code = `${country} ${String(number).padStart(2, "0")}`;
+
+      ctx.fillStyle = qty === 0 ? "#fee2e2" : qty === 1 ? "#dcfce7" : "#fed7aa";
+      ctx.fillRect(x + 1.5, y + 4, codeW - 3, rowHeight - 8);
+
+      ctx.strokeStyle = qty === 0 ? "#ef4444" : qty === 1 ? "#22c55e" : "#ea580c";
+      ctx.strokeRect(x + 1.5, y + 4, codeW - 3, rowHeight - 8);
+
+      ctx.textAlign = "center";
+      ctx.font = "6.5px Arial, sans-serif";
+      ctx.fillStyle = "#0f172a";
+      ctx.fillText(code, x + codeW / 2, y + 16);
+
+      ctx.font = "6px Arial, sans-serif";
+      ctx.fillStyle = "#334155";
+      ctx.fillText(`qtd ${qty}`, x + codeW / 2, y + 27);
+      ctx.textAlign = "left";
+    }
+
+    drawVerticalLine(ctx, margin + flagW, startY, y + rowHeight);
+    drawVerticalLine(ctx, margin + flagW + countryW, startY, y + rowHeight);
+    drawVerticalLine(ctx, margin + flagW + countryW + albumW, startY, y + rowHeight);
+
+    y += rowHeight;
+  });
+}
+
+function drawDuplicatesPdfTable(ctx, rows, metrics) {
+  const { margin, width } = metrics;
+  const startY = 112;
+  const rowHeight = 34;
+  const tableWidth = width - margin * 2;
+
+  const flagW = 80;
+  const countryW = 245;
+  const codeW = 140;
+  const qtyW = 110;
+  const extraW = tableWidth - flagW - countryW - codeW - qtyW;
+
+  drawHeaderRow(ctx, margin, startY, tableWidth, rowHeight, [
+    { text: "Bandeira", x: margin + 10 },
+    { text: "País", x: margin + flagW + 10 },
+    { text: "Figurinha", x: margin + flagW + countryW + 10 },
+    { text: "Quantidade", x: margin + flagW + countryW + codeW + 10 },
+    { text: "Repetidas extras", x: margin + flagW + countryW + codeW + qtyW + 10 }
+  ]);
+
+  let y = startY + rowHeight;
+
+  rows.forEach((row, rowIndex) => {
+    const meta = getCountryMeta(row.country);
+
+    ctx.fillStyle = rowIndex % 2 === 0 ? "#ffffff" : "#f8fafc";
+    ctx.fillRect(margin, y, tableWidth, rowHeight);
+
+    ctx.strokeStyle = "#cbd5e1";
+    ctx.strokeRect(margin, y, tableWidth, rowHeight);
+
+    ctx.font = "24px Apple Color Emoji, Segoe UI Emoji, Noto Color Emoji, Arial, sans-serif";
+    ctx.fillStyle = "#0f172a";
+    ctx.fillText(meta.flag || getFlagFallback(row.country), margin + 20, y + 24);
+
+    ctx.font = "700 13px Arial, sans-serif";
+    ctx.fillText(`${meta.name} (${row.country})`, margin + flagW + 10, y + 21);
+
+    ctx.font = "700 14px Arial, sans-serif";
+    ctx.fillText(row.code, margin + flagW + countryW + 10, y + 21);
+
+    ctx.font = "700 14px Arial, sans-serif";
+    ctx.fillText(String(row.qty), margin + flagW + countryW + codeW + 10, y + 21);
+
+    ctx.fillStyle = "#ea580c";
+    ctx.font = "700 14px Arial, sans-serif";
+    ctx.fillText(String(row.extra), margin + flagW + countryW + codeW + qtyW + 10, y + 21);
+
+    drawVerticalLine(ctx, margin + flagW, startY, y + rowHeight);
+    drawVerticalLine(ctx, margin + flagW + countryW, startY, y + rowHeight);
+    drawVerticalLine(ctx, margin + flagW + countryW + codeW, startY, y + rowHeight);
+    drawVerticalLine(ctx, margin + flagW + countryW + codeW + qtyW, startY, y + rowHeight);
+
+    y += rowHeight;
+  });
+}
+
+function drawHeaderRow(ctx, x, y, width, height, columns) {
+  ctx.fillStyle = "#e2e8f0";
+  ctx.fillRect(x, y, width, height);
+  ctx.strokeStyle = "#cbd5e1";
+  ctx.strokeRect(x, y, width, height);
+
+  ctx.fillStyle = "#0f172a";
+  ctx.font = "700 14px Arial, sans-serif";
+
+  for (const col of columns) {
+    ctx.fillText(col.text, col.x, y + 22);
+  }
+}
+
+function drawVerticalLine(ctx, x, y1, y2) {
+  ctx.strokeStyle = "#cbd5e1";
+  ctx.beginPath();
+  ctx.moveTo(x, y1);
+  ctx.lineTo(x, y2);
+  ctx.stroke();
+}
+
+function drawPdfFooter(ctx, metrics) {
+  const { margin, width, height } = metrics;
+
+  ctx.fillStyle = "#64748b";
+  ctx.font = "13px Arial, sans-serif";
+  ctx.fillText("Legenda: vermelho = faltante | verde = Total no álbum | laranja = repetida", margin, height - 28);
+
+  ctx.textAlign = "right";
+  ctx.font = "700 13px Arial, sans-serif";
+  ctx.fillStyle = "#0f172a";
+  ctx.fillText("Criado por Marcelo Ferreira", width - margin, height - 28);
+  ctx.textAlign = "left";
+}
+
+async function createA4CanvasPdf(pageDrawers) {
+  const pageWidthPt = 595.28;
+  const pageHeightPt = 841.89;
+  const canvasWidth = 1240;
+  const canvasHeight = 1754;
+  const metrics = {
+    width: canvasWidth,
+    height: canvasHeight,
+    margin: 46
   };
 
-  addObject(""); // catalog placeholder
-  addObject(""); // pages placeholder
-  addObject("<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>");
-  addObject("<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold >>");
+  const imageBytesList = [];
+
+  for (let index = 0; index < pageDrawers.length; index++) {
+    const canvas = document.createElement("canvas");
+    canvas.width = canvasWidth;
+    canvas.height = canvasHeight;
+
+    const ctx = canvas.getContext("2d");
+    ctx.fillStyle = "#ffffff";
+    ctx.fillRect(0, 0, canvasWidth, canvasHeight);
+    ctx.imageSmoothingEnabled = true;
+
+    pageDrawers[index](ctx, metrics, index + 1, pageDrawers.length);
+
+    const dataUrl = canvas.toDataURL("image/jpeg", 0.92);
+    imageBytesList.push({
+      bytes: dataUrlToBytes(dataUrl),
+      width: canvasWidth,
+      height: canvasHeight
+    });
+  }
+
+  return buildPdfWithJpegPages(imageBytesList, pageWidthPt, pageHeightPt);
+}
+
+function dataUrlToBytes(dataUrl) {
+  const base64 = dataUrl.split(",")[1];
+  const binary = atob(base64);
+  const bytes = new Uint8Array(binary.length);
+  for (let index = 0; index < binary.length; index++) {
+    bytes[index] = binary.charCodeAt(index);
+  }
+  return bytes;
+}
+
+function buildPdfWithJpegPages(images, pageWidth, pageHeight) {
+  const parts = [];
+  const offsets = [0];
+
+  const pushText = (text) => {
+    parts.push(new TextEncoder().encode(text));
+  };
+
+  const pushBytes = (bytes) => {
+    parts.push(bytes);
+  };
+
+  const currentLength = () => parts.reduce((sum, part) => sum + part.length, 0);
+
+  const objects = [];
+  const addObject = (bodyParts) => {
+    objects.push(bodyParts);
+    return objects.length;
+  };
+
+  const catalogRef = addObject([""]);
+  const pagesRef = addObject([""]);
 
   const pageRefs = [];
 
-  countryPages.forEach((countries, pageIndex) => {
-    const commands = [];
-    commands.push(textCommand("Copa 2026 - Album de Figurinhas", marginX, marginTop, 15, "F2"));
-    commands.push(textCommand(`Gerado em ${new Date().toLocaleString("pt-BR")} | Pagina ${pageIndex + 1} de ${countryPages.length}`, marginX, marginTop - 18, 8, "F1"));
+  images.forEach((image, index) => {
+    const imageRef = addObject([
+      `<< /Type /XObject /Subtype /Image /Width ${image.width} /Height ${image.height} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length ${image.bytes.length} >>\nstream\n`,
+      image.bytes,
+      "\nendstream"
+    ]);
 
-    const summary = getSummary();
-    commands.push(textCommand(`Total no album: ${summary.ownedTypes}/${TOTAL_STICKERS} | Faltantes: ${summary.missing} | Tipos repetidos: ${summary.duplicateTypes}`, marginX, marginTop - 32, 8, "F1"));
+    const content = `q\n${pageWidth} 0 0 ${pageHeight} 0 0 cm\n/Im${index + 1} Do\nQ`;
+    const contentRef = addObject([`<< /Length ${new TextEncoder().encode(content).length} >>\nstream\n${content}\nendstream`]);
 
-    let y = marginTop - headerGap;
+    const pageRef = addObject([
+      `<< /Type /Page /Parent ${pagesRef} 0 R /MediaBox [0 0 ${pageWidth} ${pageHeight}] /Resources << /XObject << /Im${index + 1} ${imageRef} 0 R >> >> >> /Contents ${contentRef} 0 R >>`
+    ]);
 
-    commands.push(rectCommand(marginX, y - 3, pageWidth - marginX * 2, 17, "0.90 0.94 0.98"));
-    commands.push(textCommand("Bandeira", marginX + 4, y + 2, 7, "F2"));
-    commands.push(textCommand("Pais", marginX + 52, y + 2, 7, "F2"));
-    commands.push(textCommand("Album", marginX + 145, y + 2, 7, "F2"));
-    commands.push(textCommand("Figurinhas 01 a 20", marginX + 252, y + 2, 7, "F2"));
-    y -= rowHeight;
-
-    for (const country of countries) {
-      const meta = getCountryMeta(country);
-      const rowColor = ((Math.round((marginTop - headerGap - y) / rowHeight)) % 2 === 0) ? "1 1 1" : "0.97 0.98 1";
-      commands.push(rectCommand(marginX, y - 3, pageWidth - marginX * 2, 17, rowColor));
-
-      const flagText = getFlagFallback(country);
-      commands.push(textCommand(flagText, marginX + 4, y + 2, 7, "F1"));
-      commands.push(textCommand(sanitizePdfText(`${meta.name} (${country})`), marginX + 52, y + 2, 7, "F2"));
-      commands.push(textCommand(`${country} 01 ate ${country} 20`, marginX + 145, y + 2, 7, "F1"));
-
-      let x = marginX + 252;
-      const cellWidth = 15.5;
-
-      for (let number = 1; number <= STICKERS_PER_COUNTRY; number++) {
-        const qty = state.inventory[country][number] || 0;
-        const fill = qty === 0 ? "0.99 0.82 0.82" : qty === 1 ? "0.78 0.95 0.82" : "0.99 0.73 0.45";
-        commands.push(rectCommand(x, y - 4, cellWidth - 1, 17, fill));
-        commands.push(textCommand(String(number).padStart(2, "0"), x + 2.2, y + 3, 5, "F2"));
-        commands.push(textCommand(String(qty), x + 5.2, y - 4, 5, "F1"));
-        x += cellWidth;
-      }
-
-      y -= rowHeight;
-    }
-
-    commands.push(textCommand("Legenda: vermelho = faltante | verde = Total no album | laranja = repetida", marginX, 30, 8, "F1"));
-    commands.push(textCommand("Criado por Marcelo Ferreira", 430, 30, 8, "F2"));
-
-    const content = commands.join("\n");
-    const contentLength = new TextEncoder().encode(content).length;
-    const contentRef = addObject(`<< /Length ${contentLength} >>\nstream\n${content}\nendstream`);
-    const pageRef = addObject(`<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${pageWidth} ${pageHeight}] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Contents ${contentRef} 0 R >>`);
     pageRefs.push(pageRef);
   });
 
-  objects[1] = "<< /Type /Catalog /Pages 2 0 R >>";
-  objects[2] = `<< /Type /Pages /Kids [${pageRefs.map((ref) => `${ref} 0 R`).join(" ")}] /Count ${pageRefs.length} >>`;
+  objects[catalogRef - 1] = [`<< /Type /Catalog /Pages ${pagesRef} 0 R >>`];
+  objects[pagesRef - 1] = [`<< /Type /Pages /Kids [${pageRefs.map((ref) => `${ref} 0 R`).join(" ")}] /Count ${pageRefs.length} >>`];
 
-  let pdf = "%PDF-1.4\n";
-  const offsets = [0];
-  const encoder = new TextEncoder();
+  pushText("%PDF-1.4\n");
 
-  for (let index = 1; index < objects.length; index++) {
-    offsets[index] = encoder.encode(pdf).length;
-    pdf += `${index} 0 obj\n${objects[index]}\nendobj\n`;
+  for (let index = 0; index < objects.length; index++) {
+    offsets[index + 1] = currentLength();
+    pushText(`${index + 1} 0 obj\n`);
+    for (const part of objects[index]) {
+      if (typeof part === "string") pushText(part);
+      else pushBytes(part);
+    }
+    pushText("\nendobj\n");
   }
 
-  const xrefOffset = encoder.encode(pdf).length;
-  pdf += `xref\n0 ${objects.length}\n`;
-  pdf += "0000000000 65535 f \n";
-  for (let index = 1; index < objects.length; index++) {
-    pdf += `${String(offsets[index]).padStart(10, "0")} 00000 n \n`;
-  }
-  pdf += `trailer\n<< /Size ${objects.length} /Root 1 0 R >>\nstartxref\n${xrefOffset}\n%%EOF`;
+  const xrefOffset = currentLength();
+  pushText(`xref\n0 ${objects.length + 1}\n`);
+  pushText("0000000000 65535 f \n");
 
-  return encoder.encode(pdf);
+  for (let index = 1; index <= objects.length; index++) {
+    pushText(`${String(offsets[index]).padStart(10, "0")} 00000 n \n`);
+  }
+
+  pushText(`trailer\n<< /Size ${objects.length + 1} /Root ${catalogRef} 0 R >>\nstartxref\n${xrefOffset}\n%%EOF`);
+
+  const totalLength = currentLength();
+  const output = new Uint8Array(totalLength);
+  let offset = 0;
+
+  for (const part of parts) {
+    output.set(part, offset);
+    offset += part.length;
+  }
+
+  return output;
 }
 
 function getFlagFallback(country) {
@@ -877,6 +1162,18 @@ function getFlagFallback(country) {
   return map[country] || country;
 }
 
+function sanitizePdfText(text) {
+  return String(text)
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[–—]/g, "-")
+    .replace(/[“”]/g, '"')
+    .replace(/[‘’]/g, "'")
+    .replace(/[^\x20-\x7E]/g, " ");
+}
+
+
+
 function rectCommand(x, y, width, height, rgb) {
   return `q ${rgb} rg ${x} ${y} ${width} ${height} re f Q`;
 }
@@ -889,15 +1186,6 @@ function escapePdfText(text) {
   return String(text).replace(/\\/g, "\\\\").replace(/\(/g, "\\(").replace(/\)/g, "\\)");
 }
 
-function sanitizePdfText(text) {
-  return String(text)
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/[–—]/g, "-")
-    .replace(/[“”]/g, '"')
-    .replace(/[‘’]/g, "'")
-    .replace(/[^\x20-\x7E]/g, " ");
-}
 
 
 function buildPdfReportLines() {
@@ -1018,15 +1306,6 @@ function escapePdfText(text) {
   return String(text).replace(/\\/g, "\\\\").replace(/\(/g, "\\(").replace(/\)/g, "\\)");
 }
 
-function sanitizePdfText(text) {
-  return String(text)
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/[–—]/g, "-")
-    .replace(/[“”]/g, '"')
-    .replace(/[‘’]/g, "'")
-    .replace(/[^\x20-\x7E]/g, " ");
-}
 
 function wrapPdfLine(line, maxChars) {
   if (!line) return [""];
