@@ -62,6 +62,7 @@ const LEGACY_STORAGE_KEY = "figurinhas-copa-2026-state-v1";
 let state = createEmptyState();
 let parsedItems = [];
 let lastComparison = [];
+let parsedAlreadyApplied = false;
 let deferredInstallPrompt = null;
 let removeModeActive = false;
 
@@ -116,13 +117,7 @@ function init() {
   setupEvents();
   setupPwaInstall();
   setupServiceWorker();
-
-  const savedApiKey = localStorage.getItem(API_KEY_STORAGE) || "";
-  $("apiKey").value = savedApiKey;
-  $("saveApiKey").checked = Boolean(savedApiKey);
-  $("modelName").value = state.model || "gpt-4.1-mini";
-
-  renderAll();
+renderAll();
 }
 
 function setupTabs() {
@@ -487,24 +482,55 @@ function parseStickerText(text) {
     .toUpperCase()
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
-    .replace(/([A-Z]{3})(\d)/g, "$1 $2")
-    .replace(/(\d)([A-Z]{3})/g, "$1 $2")
-    .replace(/N[UÚ]MERO|NUMERO|NRO|Nº|NO\.?/g, " ")
+    .replace(/([A-Z]{3})\s*[-_./]?\s*(0?[1-9]|1[0-9]|20)\b/g, "$1 $2")
+    .replace(/\bN[UÚ]?MERO\b|\bNUMERO\b|\bNRO\b|\bNº\b|\bNO\.?\b/g, " ")
     .replace(/[;|•·]/g, " ")
     .replace(/[,:]/g, " ");
 
-  const tokenRegex = new RegExp(`\\b(${countryPattern})\\b|\\b([1-9]|1[0-9]|20)\\b`, "g");
+  // Aceita:
+  // BRA 01
+  // BRA01
+  // BRA 1, 2, 3
+  // BRA 12 x2
+  // BRA 12 qtd 2
+  const tokenRegex = new RegExp(
+    `\\bX\\s*([1-9]\\d*)\\b|\\bQTD\\.?\\s*([1-9]\\d*)\\b|\\bQUANTIDADE\\s*([1-9]\\d*)\\b|\\b(${countryPattern})\\b|\\b(0?[1-9]|1[0-9]|20)\\b`,
+    "g"
+  );
+
   const items = [];
   let currentCountry = null;
+  let lastItem = null;
   let match;
 
   while ((match = tokenRegex.exec(normalized)) !== null) {
-    if (match[1]) {
-      currentCountry = match[1];
-    } else if (match[2] && currentCountry) {
-      items.push({ country: currentCountry, number: Number(match[2]) });
+    const multiplier = Number(match[1] || match[2] || match[3] || 0);
+    const country = match[4];
+    const numberText = match[5];
+
+    if (multiplier && lastItem) {
+      for (let i = 1; i < multiplier; i++) {
+        items.push({ country: lastItem.country, number: lastItem.number });
+      }
+      continue;
+    }
+
+    if (country) {
+      currentCountry = country;
+      lastItem = null;
+      continue;
+    }
+
+    if (numberText && currentCountry) {
+      const number = Number(numberText);
+      if (number >= 1 && number <= STICKERS_PER_COUNTRY) {
+        const item = { country: currentCountry, number };
+        items.push(item);
+        lastItem = item;
+      }
     }
   }
+
   return items;
 }
 
@@ -515,8 +541,10 @@ async function importTextFile(event) {
 
   try {
     const text = await file.text();
-    const currentText = $("manualText").value.trim();
-    $("manualText").value = currentText ? `${currentText}\n${text}` : text;
+
+    // Substitui o conteúdo anterior para não contar novamente figurinhas já importadas.
+    $("manualText").value = text;
+    clearParsed();
     parseManualText();
   } catch (error) {
     alert(`Não foi possível ler o arquivo de texto: ${error.message}`);
@@ -531,6 +559,8 @@ function parseManualText() {
     alert("Cole ou importe um texto antes de analisar.");
     return;
   }
+
+  parsedAlreadyApplied = false;
   parsedItems = parseStickerText(text);
   lastComparison = buildComparison(parsedItems);
   updateParsedResult("Texto lido pelo app", { comparison: lastComparison });
@@ -582,18 +612,26 @@ function updateParsedResult(sourceLabel = "Resultado", options = {}) {
   } else {
     lines.push("Figurinhas lidas:");
     for (const [country, values] of Object.entries(grouped)) {
-      const numbers = values.map((item) => item.qty > 1 ? `${item.number} x${item.qty}` : `${item.number}`).join(", ");
+      const numbers = values.map((item) => {
+        const code = String(item.number).padStart(2, "0");
+        return item.qty > 1 ? `${code} x${item.qty}` : code;
+      }).join(", ");
       lines.push(`${getCountryLabel(country)}: ${numbers}`);
     }
     lines.push("");
     lines.push("Verificação no álbum atual:");
     for (const item of comparison) {
-      lines.push(`${getCountryLabel(item.country)} ${item.number} — leitura x${item.readQty} | atual ${item.currentQty} → ${item.afterQty} | ${item.status}`);
+      lines.push(`${getCountryLabel(item.country)} ${String(item.number).padStart(2, "0")} — leitura x${item.readQty} | atual ${item.currentQty} → ${item.afterQty} | ${item.status}`);
     }
   }
 
+  if (parsedAlreadyApplied) {
+    lines.push("");
+    lines.push("Status: resultado já aplicado ao álbum. Para importar novamente, altere o texto e toque em Ler texto e atualizar.");
+  }
+
   $("aiResult").textContent = lines.join("\n");
-  $("applyParsed").disabled = parsedItems.length === 0;
+  $("applyParsed").disabled = parsedItems.length === 0 || parsedAlreadyApplied;
 }
 
 function groupParsedItems(items) {
@@ -617,6 +655,12 @@ function groupParsedItems(items) {
 
 function applyParsedItems(options = {}) {
   if (!parsedItems.length) return;
+
+  if (parsedAlreadyApplied) {
+    alert("Este resultado já foi aplicado. Para importar novamente, altere o texto e toque em Ler texto e atualizar.");
+    return;
+  }
+
   const { silent = false } = options;
   const mode = $("applyMode").value;
   const grouped = groupParsedItems(parsedItems);
@@ -640,6 +684,7 @@ function applyParsedItems(options = {}) {
   saveState();
   renderAll();
   lastComparison = comparisonBefore;
+  parsedAlreadyApplied = true;
   updateParsedResult("Resultado aplicado ao álbum", { comparison: comparisonBefore });
 
   if (!silent) {
@@ -650,6 +695,7 @@ function applyParsedItems(options = {}) {
 function clearParsed() {
   parsedItems = [];
   lastComparison = [];
+  parsedAlreadyApplied = false;
   $("aiResult").textContent = "Nenhum texto analisado ainda.";
   $("applyParsed").disabled = true;
 }
