@@ -162,7 +162,7 @@ main {
 
 .toolbar {
   display: grid;
-  grid-template-columns: 1fr 1.2fr auto auto auto auto;
+  grid-template-columns: 1fr 1.2fr auto auto auto;
   gap: 12px;
   align-items: end;
 }
@@ -724,8 +724,7 @@ button.pill {
 }
 
 /* Botão Ler foto individual */
-#readStickerButton,
-#readStickerPhotoButton {
+#readStickerButton {
   white-space: nowrap;
 }
 
@@ -735,7 +734,6 @@ button.pill {
   }
 
   #readStickerButton,
-  #readStickerPhotoButton,
   #toggleRemoveMode,
   #resetVisibleCountry {
     width: 100%;

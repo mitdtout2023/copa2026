@@ -1,6 +1,6 @@
 const COUNTRIES = [
   "ALG", "ARG", "AUS", "BEL", "BIH", "BRA", "CAN", "CIV", "COL", "CRO",
-  "ECU", "ENG", "ESP", "FRA", "FWG", "GER", "GHA", "IRN", "JPN", "KOR",
+  "ECU", "ENG", "ESP", "FRA", "FWC", "GER", "GHA", "IRN", "JPN", "KOR",
   "KSA", "MAR", "MEX", "NED", "NOR", "PAN", "POR", "QAT", "RSA", "SCO",
   "SEN", "SUI", "TUN", "URU", "USA", "UZB"
 ];
@@ -21,7 +21,7 @@ const COUNTRY_META = {
   ENG: { name: "Inglaterra", flag: "🏴" },
   ESP: { name: "Espanha", flag: "🇪🇸" },
   FRA: { name: "França", flag: "🇫🇷" },
-  FWG: { name: "FIFA World Cup", flag: "🏆" },
+  FWC: { name: "FIFA World Cup", flag: "🏆" },
   GER: { name: "Alemanha", flag: "🇩🇪" },
   GHA: { name: "Gana", flag: "🇬🇭" },
   IRN: { name: "Irã", flag: "🇮🇷" },
@@ -150,8 +150,6 @@ function setupCountryFilter() {
 function setupEvents() {
   $("countryFilter").addEventListener("change", renderAlbum);
   $("readStickerButton").addEventListener("click", readStickerByCode);
-  $("readStickerPhotoButton").addEventListener("click", readStickerByPhoto);
-  $("singleStickerPhotoInput").addEventListener("change", handleSingleStickerPhoto);
   $("toggleRemoveMode").addEventListener("click", toggleRemoveMode);
   $("resetVisibleCountry").addEventListener("click", resetVisibleCountry);
   $("copyMissing").addEventListener("click", () => copyText(buildMissingText()));
@@ -291,204 +289,19 @@ function readStickerByCode() {
   applyReadStickerItems(items, "manual");
 }
 
-function readStickerByPhoto() {
-  const input = $("singleStickerPhotoInput");
 
-  if (!input) {
-    alert("Campo de foto não encontrado. Use o botão Ler figurinha para digitar o código.");
-    return;
-  }
 
-  input.value = "";
-  input.click();
-}
 
-async function handleSingleStickerPhoto(event) {
-  const file = event.target.files?.[0];
-  if (!file) return;
 
-  const status = $("saveStatus");
-  const previousStatus = status ? status.textContent : "";
 
-  try {
-    if (status) status.textContent = "Lendo foto individual da figurinha...";
 
-    const text = await recognizeSingleStickerPhoto(file);
-    const items = parseStickerCodesStrict(text);
 
-    if (!items.length) {
-      const manualCode = prompt("Não consegui ler o código na foto.\n\nDigite o código manualmente, exemplo: JPN 15.");
-      if (manualCode === null) return;
 
-      const manualItems = parseStickerCodesStrict(manualCode);
-      if (!manualItems.length) {
-        alert("Código inválido. Use o formato JPN 15, BRA 01, ARG 12 etc.");
-        return;
-      }
 
-      applyReadStickerItems([manualItems[0]], "manual");
-      return;
-    }
 
-    // Leitura individual: aplica somente o primeiro código encontrado.
-    const item = items[0];
-    const code = `${item.country} ${String(item.number).padStart(2, "0")}`;
-    const confirmed = confirm(`Código identificado: ${code}\n\nDeseja atualizar o álbum com esta figurinha?`);
 
-    if (!confirmed) {
-      const manualCode = prompt("Digite o código correto manualmente, exemplo: JPN 15.");
-      if (manualCode === null) return;
 
-      const manualItems = parseStickerCodesStrict(manualCode);
-      if (!manualItems.length) {
-        alert("Código inválido. Use o formato JPN 15, BRA 01, ARG 12 etc.");
-        return;
-      }
 
-      applyReadStickerItems([manualItems[0]], "manual");
-      return;
-    }
-
-    applyReadStickerItems([item], "foto");
-  } catch (error) {
-    const manualCode = prompt(`A leitura por foto falhou ou ficou lenta.\n\nDigite o código manualmente, exemplo: JPN 15.\n\nErro: ${error.message}`);
-    if (manualCode === null) return;
-
-    const manualItems = parseStickerCodesStrict(manualCode);
-    if (!manualItems.length) {
-      alert("Código inválido. Use o formato JPN 15, BRA 01, ARG 12 etc.");
-      return;
-    }
-
-    applyReadStickerItems([manualItems[0]], "manual");
-  } finally {
-    if (status) status.textContent = previousStatus || "Dados salvos localmente.";
-    event.target.value = "";
-  }
-}
-
-async function recognizeSingleStickerPhoto(file) {
-  await loadTesseractIfNeeded();
-
-  const image = await loadImageFromFile(file);
-
-  // Leitura individual: processa somente a região superior direita,
-  // onde normalmente fica o código da figurinha, para ser mais rápido.
-  const variants = buildSingleStickerPhotoVariants(image);
-  const texts = [];
-
-  for (const variant of variants) {
-    try {
-      const result = await Tesseract.recognize(variant.dataUrl, "eng", {
-        tessedit_char_whitelist: "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 ",
-        tessedit_pageseg_mode: "7"
-      });
-
-      const text = result?.data?.text || "";
-      if (text.trim()) texts.push(text);
-    } catch (error) {
-      console.warn(`Falha OCR individual: ${variant.name}`, error);
-    }
-  }
-
-  return texts.join("\n");
-}
-
-function loadTesseractIfNeeded() {
-  if (window.Tesseract) return Promise.resolve();
-
-  return new Promise((resolve, reject) => {
-    const script = document.createElement("script");
-    script.src = "https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js";
-    script.async = true;
-    script.onload = () => resolve();
-    script.onerror = () => reject(new Error("Não foi possível carregar o leitor de foto. Verifique a internet ou digite o código manualmente."));
-    document.head.appendChild(script);
-  });
-}
-
-function loadImageFromFile(file) {
-  return new Promise((resolve, reject) => {
-    const image = new Image();
-    const url = URL.createObjectURL(file);
-
-    image.onload = () => {
-      URL.revokeObjectURL(url);
-      resolve(image);
-    };
-
-    image.onerror = () => {
-      URL.revokeObjectURL(url);
-      reject(new Error("Não foi possível carregar a foto selecionada."));
-    };
-
-    image.src = url;
-  });
-}
-
-function buildSingleStickerPhotoVariants(image) {
-  const w = image.naturalWidth || image.width;
-  const h = image.naturalHeight || image.height;
-
-  // Para leitura individual, fotografe uma figurinha por vez e tente deixar
-  // o código no canto superior direito da imagem.
-  const crops = [
-    { name: "superior direito", x: Math.floor(w * 0.42), y: 0, w: Math.floor(w * 0.58), h: Math.floor(h * 0.34) },
-    { name: "topo completo", x: 0, y: 0, w, h: Math.floor(h * 0.30) },
-    { name: "imagem completa reduzida", x: 0, y: 0, w, h }
-  ];
-
-  const variants = [];
-
-  for (const crop of crops) {
-    variants.push(makeSingleStickerVariant(image, crop, false));
-    variants.push(makeSingleStickerVariant(image, crop, true));
-  }
-
-  return variants;
-}
-
-function makeSingleStickerVariant(image, crop, highContrast = false) {
-  const scale = highContrast ? 2.2 : 1.7;
-  const canvas = document.createElement("canvas");
-  canvas.width = Math.max(1, Math.floor(crop.w * scale));
-  canvas.height = Math.max(1, Math.floor(crop.h * scale));
-
-  const ctx = canvas.getContext("2d");
-  ctx.imageSmoothingEnabled = true;
-  ctx.drawImage(
-    image,
-    crop.x,
-    crop.y,
-    crop.w,
-    crop.h,
-    0,
-    0,
-    canvas.width,
-    canvas.height
-  );
-
-  if (highContrast) {
-    const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-    const data = imgData.data;
-
-    for (let i = 0; i < data.length; i += 4) {
-      const gray = data[i] * 0.299 + data[i + 1] * 0.587 + data[i + 2] * 0.114;
-      const contrast = Math.max(0, Math.min(255, (gray - 128) * 1.7 + 128));
-      const threshold = contrast > 145 ? 255 : 0;
-      data[i] = threshold;
-      data[i + 1] = threshold;
-      data[i + 2] = threshold;
-    }
-
-    ctx.putImageData(imgData, 0, 0);
-  }
-
-  return {
-    name: `${crop.name}${highContrast ? " alto contraste" : ""}`,
-    dataUrl: canvas.toDataURL("image/png")
-  };
-}
 
 
 
@@ -1055,7 +868,12 @@ async function importJson(event) {
     for (const country of COUNTRIES) {
       for (let number = 1; number <= STICKERS_PER_COUNTRY; number++) {
         const value = imported?.inventory?.[country]?.[number];
-        fresh.inventory[country][number] = Number.isInteger(value) && value >= 0 ? value : 0;
+        const legacyFwgValue = country === "FWC" ? imported?.inventory?.FWG?.[number] : undefined;
+        const normalizedValue = Number.isInteger(value) && value >= 0 ? value : 0;
+        const normalizedLegacyFwgValue = Number.isInteger(legacyFwgValue) && legacyFwgValue >= 0 ? legacyFwgValue : 0;
+        fresh.inventory[country][number] = country === "FWC"
+          ? Math.max(normalizedValue, normalizedLegacyFwgValue)
+          : normalizedValue;
       }
     }
     state = fresh;

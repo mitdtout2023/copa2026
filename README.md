@@ -257,3 +257,15 @@ Na aba **Álbum**, use o campo **Buscar país** para localizar rapidamente pelo 
 - A leitura por foto processa uma figurinha por vez e prioriza a região superior direita da imagem.
 - Antes de atualizar o álbum, o app confirma o código identificado.
 - Se a leitura falhar, o app pede o código manualmente.
+
+
+## Atualização
+- Removido o botão **Ler foto individual**.
+- Mantido o botão **Ler figurinha** para digitar/colar códigos.
+- Incluído o país/código **FWC** com 20 figurinhas: `FWC 01` até `FWC 20`.
+
+
+## Correção FWC
+- Removido o código **FWG**.
+- Mantido somente o código **FWC**.
+- Incluída migração automática: dados antigos salvos em **FWG** são transferidos para **FWC** ao carregar/importar backup.
