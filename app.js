@@ -885,10 +885,8 @@ function drawAlbumPdfTable(ctx, countries, metrics) {
     ctx.strokeStyle = "#cbd5e1";
     ctx.strokeRect(margin, y, tableWidth, rowHeight);
 
-    // Coluna Bandeira: usa emoji/ícone de bandeira renderizado no canvas.
-    ctx.font = "24px Apple Color Emoji, Segoe UI Emoji, Noto Color Emoji, Arial, sans-serif";
-    ctx.fillStyle = "#0f172a";
-    ctx.fillText(meta.flag || getFlagFallback(country), margin + 18, y + 24);
+    // Coluna Bandeira: ícone desenhado no canvas para aparecer corretamente no PDF.
+    drawFlagIcon(ctx, country, margin + 14, y + 7, 42, 22);
 
     ctx.font = "700 13px Arial, sans-serif";
     ctx.fillStyle = "#0f172a";
@@ -963,9 +961,7 @@ function drawDuplicatesPdfTable(ctx, rows, metrics) {
     ctx.strokeStyle = "#cbd5e1";
     ctx.strokeRect(margin, y, tableWidth, rowHeight);
 
-    ctx.font = "24px Apple Color Emoji, Segoe UI Emoji, Noto Color Emoji, Arial, sans-serif";
-    ctx.fillStyle = "#0f172a";
-    ctx.fillText(meta.flag || getFlagFallback(row.country), margin + 20, y + 24);
+    drawFlagIcon(ctx, row.country, margin + 16, y + 7, 42, 22);
 
     ctx.font = "700 13px Arial, sans-serif";
     ctx.fillText(`${meta.name} (${row.country})`, margin + flagW + 10, y + 21);
@@ -1010,6 +1006,273 @@ function drawVerticalLine(ctx, x, y1, y2) {
   ctx.lineTo(x, y2);
   ctx.stroke();
 }
+
+
+function drawFlagIcon(ctx, country, x, y, w, h) {
+  ctx.save();
+
+  ctx.fillStyle = "#ffffff";
+  ctx.fillRect(x, y, w, h);
+  ctx.strokeStyle = "#94a3b8";
+  ctx.lineWidth = 1;
+  ctx.strokeRect(x, y, w, h);
+
+  const horizontal = (colors) => {
+    const stripeH = h / colors.length;
+    colors.forEach((color, index) => {
+      ctx.fillStyle = color;
+      ctx.fillRect(x, y + index * stripeH, w, stripeH + 0.5);
+    });
+  };
+
+  const vertical = (colors) => {
+    const stripeW = w / colors.length;
+    colors.forEach((color, index) => {
+      ctx.fillStyle = color;
+      ctx.fillRect(x + index * stripeW, y, stripeW + 0.5, h);
+    });
+  };
+
+  const cross = (bg, crossColor, borderColor = null) => {
+    ctx.fillStyle = bg;
+    ctx.fillRect(x, y, w, h);
+    if (borderColor) {
+      ctx.fillStyle = borderColor;
+      ctx.fillRect(x + w * 0.40, y, w * 0.20, h);
+      ctx.fillRect(x, y + h * 0.38, w, h * 0.24);
+    }
+    ctx.fillStyle = crossColor;
+    ctx.fillRect(x + w * 0.44, y, w * 0.12, h);
+    ctx.fillRect(x, y + h * 0.42, w, h * 0.16);
+  };
+
+  const diagonalCross = (bg, color) => {
+    ctx.fillStyle = bg;
+    ctx.fillRect(x, y, w, h);
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 4;
+    ctx.beginPath();
+    ctx.moveTo(x, y);
+    ctx.lineTo(x + w, y + h);
+    ctx.moveTo(x + w, y);
+    ctx.lineTo(x, y + h);
+    ctx.stroke();
+  };
+
+  const triangle = (color) => {
+    ctx.fillStyle = color;
+    ctx.beginPath();
+    ctx.moveTo(x, y);
+    ctx.lineTo(x + w * 0.45, y + h / 2);
+    ctx.lineTo(x, y + h);
+    ctx.closePath();
+    ctx.fill();
+  };
+
+  switch (country) {
+    case "ALG":
+      vertical(["#006233", "#ffffff"]);
+      ctx.fillStyle = "#d21034";
+      ctx.beginPath(); ctx.arc(x + w * 0.52, y + h * 0.50, h * 0.22, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = "#ffffff";
+      ctx.beginPath(); ctx.arc(x + w * 0.57, y + h * 0.50, h * 0.18, 0, Math.PI * 2); ctx.fill();
+      break;
+    case "ARG":
+      horizontal(["#74acdf", "#ffffff", "#74acdf"]);
+      drawFlagSun(ctx, x + w / 2, y + h / 2, h * 0.12, "#f6b40e");
+      break;
+    case "AUS":
+      ctx.fillStyle = "#012169"; ctx.fillRect(x, y, w, h);
+      drawFlagStar(ctx, x + w * 0.72, y + h * 0.52, h * 0.16, "#ffffff");
+      break;
+    case "BEL":
+      vertical(["#000000", "#ffd90c", "#ef3340"]);
+      break;
+    case "BIH":
+      ctx.fillStyle = "#002f6c"; ctx.fillRect(x, y, w, h);
+      ctx.fillStyle = "#f7d117";
+      ctx.beginPath(); ctx.moveTo(x + w * 0.52, y); ctx.lineTo(x + w, y); ctx.lineTo(x + w, y + h); ctx.closePath(); ctx.fill();
+      break;
+    case "BRA":
+      ctx.fillStyle = "#009b3a"; ctx.fillRect(x, y, w, h);
+      ctx.fillStyle = "#ffdf00";
+      ctx.beginPath(); ctx.moveTo(x + w / 2, y + h * 0.12); ctx.lineTo(x + w * 0.88, y + h / 2); ctx.lineTo(x + w / 2, y + h * 0.88); ctx.lineTo(x + w * 0.12, y + h / 2); ctx.closePath(); ctx.fill();
+      ctx.fillStyle = "#002776"; ctx.beginPath(); ctx.arc(x + w / 2, y + h / 2, h * 0.22, 0, Math.PI * 2); ctx.fill();
+      break;
+    case "CAN":
+      vertical(["#ff0000", "#ffffff", "#ff0000"]);
+      drawFlagStar(ctx, x + w / 2, y + h / 2, h * 0.16, "#ff0000");
+      break;
+    case "CIV":
+      vertical(["#f77f00", "#ffffff", "#009e60"]);
+      break;
+    case "COL":
+      horizontal(["#fcd116", "#003893", "#ce1126"]);
+      ctx.fillStyle = "#fcd116"; ctx.fillRect(x, y, w, h * 0.5);
+      ctx.fillStyle = "#003893"; ctx.fillRect(x, y + h * 0.5, w, h * 0.25);
+      ctx.fillStyle = "#ce1126"; ctx.fillRect(x, y + h * 0.75, w, h * 0.25);
+      break;
+    case "CRO":
+      horizontal(["#ff0000", "#ffffff", "#171796"]);
+      ctx.fillStyle = "#ffffff"; ctx.fillRect(x + w * 0.43, y + h * 0.32, w * 0.14, h * 0.36);
+      ctx.strokeStyle = "#ff0000"; ctx.strokeRect(x + w * 0.43, y + h * 0.32, w * 0.14, h * 0.36);
+      break;
+    case "ECU":
+      ctx.fillStyle = "#ffdd00"; ctx.fillRect(x, y, w, h * 0.5);
+      ctx.fillStyle = "#034ea2"; ctx.fillRect(x, y + h * 0.5, w, h * 0.25);
+      ctx.fillStyle = "#ed1c24"; ctx.fillRect(x, y + h * 0.75, w, h * 0.25);
+      break;
+    case "ENG":
+      cross("#ffffff", "#ce1124");
+      break;
+    case "ESP":
+      ctx.fillStyle = "#aa151b"; ctx.fillRect(x, y, w, h * 0.25);
+      ctx.fillStyle = "#f1bf00"; ctx.fillRect(x, y + h * 0.25, w, h * 0.5);
+      ctx.fillStyle = "#aa151b"; ctx.fillRect(x, y + h * 0.75, w, h * 0.25);
+      break;
+    case "FRA":
+      vertical(["#0055a4", "#ffffff", "#ef4135"]);
+      break;
+    case "FWG":
+      ctx.fillStyle = "#f8fafc"; ctx.fillRect(x, y, w, h);
+      ctx.fillStyle = "#d4af37";
+      ctx.beginPath(); ctx.arc(x + w / 2, y + h * 0.42, h * 0.24, 0, Math.PI * 2); ctx.fill();
+      ctx.fillRect(x + w * 0.43, y + h * 0.54, w * 0.14, h * 0.28);
+      break;
+    case "GER":
+      horizontal(["#000000", "#dd0000", "#ffce00"]);
+      break;
+    case "GHA":
+      horizontal(["#ce1126", "#fcd116", "#006b3f"]);
+      drawFlagStar(ctx, x + w / 2, y + h / 2, h * 0.16, "#000000");
+      break;
+    case "IRN":
+      horizontal(["#239f40", "#ffffff", "#da0000"]);
+      break;
+    case "JPN":
+      ctx.fillStyle = "#ffffff"; ctx.fillRect(x, y, w, h);
+      ctx.fillStyle = "#bc002d"; ctx.beginPath(); ctx.arc(x + w / 2, y + h / 2, h * 0.24, 0, Math.PI * 2); ctx.fill();
+      break;
+    case "KOR":
+      ctx.fillStyle = "#ffffff"; ctx.fillRect(x, y, w, h);
+      ctx.fillStyle = "#c60c30"; ctx.beginPath(); ctx.arc(x + w / 2, y + h / 2, h * 0.22, Math.PI, 0); ctx.fill();
+      ctx.fillStyle = "#003478"; ctx.beginPath(); ctx.arc(x + w / 2, y + h / 2, h * 0.22, 0, Math.PI); ctx.fill();
+      break;
+    case "KSA":
+      ctx.fillStyle = "#006c35"; ctx.fillRect(x, y, w, h);
+      ctx.fillStyle = "#ffffff"; ctx.fillRect(x + w * 0.20, y + h * 0.58, w * 0.60, h * 0.08);
+      break;
+    case "MAR":
+      ctx.fillStyle = "#c1272d"; ctx.fillRect(x, y, w, h);
+      drawFlagStar(ctx, x + w / 2, y + h / 2, h * 0.16, "#006233");
+      break;
+    case "MEX":
+      vertical(["#006847", "#ffffff", "#ce1126"]);
+      ctx.fillStyle = "#8c6b33"; ctx.beginPath(); ctx.arc(x + w / 2, y + h / 2, h * 0.10, 0, Math.PI * 2); ctx.fill();
+      break;
+    case "NED":
+      horizontal(["#ae1c28", "#ffffff", "#21468b"]);
+      break;
+    case "NOR":
+      cross("#ba0c2f", "#00205b", "#ffffff");
+      break;
+    case "PAN":
+      ctx.fillStyle = "#ffffff"; ctx.fillRect(x, y, w / 2, h / 2);
+      ctx.fillStyle = "#d21034"; ctx.fillRect(x + w / 2, y, w / 2, h / 2);
+      ctx.fillStyle = "#005293"; ctx.fillRect(x, y + h / 2, w / 2, h / 2);
+      ctx.fillStyle = "#ffffff"; ctx.fillRect(x + w / 2, y + h / 2, w / 2, h / 2);
+      break;
+    case "POR":
+      vertical(["#006600", "#ff0000"]);
+      ctx.fillStyle = "#ffcc00"; ctx.beginPath(); ctx.arc(x + w * 0.42, y + h / 2, h * 0.14, 0, Math.PI * 2); ctx.fill();
+      break;
+    case "QAT":
+      vertical(["#ffffff", "#8a1538"]);
+      break;
+    case "RSA":
+      horizontal(["#de3831", "#ffffff", "#007a4d", "#ffffff", "#002395"]);
+      triangle("#000000");
+      break;
+    case "SCO":
+      diagonalCross("#005eb8", "#ffffff");
+      break;
+    case "SEN":
+      vertical(["#00853f", "#fdef42", "#e31b23"]);
+      drawFlagStar(ctx, x + w / 2, y + h / 2, h * 0.14, "#00853f");
+      break;
+    case "SUI":
+      ctx.fillStyle = "#d52b1e"; ctx.fillRect(x, y, w, h);
+      ctx.fillStyle = "#ffffff";
+      ctx.fillRect(x + w * 0.43, y + h * 0.22, w * 0.14, h * 0.56);
+      ctx.fillRect(x + w * 0.28, y + h * 0.40, w * 0.44, h * 0.18);
+      break;
+    case "TUN":
+      ctx.fillStyle = "#e70013"; ctx.fillRect(x, y, w, h);
+      ctx.fillStyle = "#ffffff"; ctx.beginPath(); ctx.arc(x + w / 2, y + h / 2, h * 0.25, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = "#e70013"; ctx.beginPath(); ctx.arc(x + w * 0.52, y + h / 2, h * 0.12, 0, Math.PI * 2); ctx.fill();
+      break;
+    case "URU":
+      horizontal(["#ffffff", "#0038a8", "#ffffff", "#0038a8", "#ffffff", "#0038a8", "#ffffff", "#0038a8", "#ffffff"]);
+      ctx.fillStyle = "#ffffff"; ctx.fillRect(x, y, w * 0.38, h * 0.50);
+      drawFlagSun(ctx, x + w * 0.19, y + h * 0.25, h * 0.11, "#fcd116");
+      break;
+    case "USA":
+      horizontal(["#b22234", "#ffffff", "#b22234", "#ffffff", "#b22234", "#ffffff", "#b22234"]);
+      ctx.fillStyle = "#3c3b6e"; ctx.fillRect(x, y, w * 0.42, h * 0.54);
+      break;
+    case "UZB":
+      horizontal(["#1eb5e5", "#ffffff", "#009b3a"]);
+      ctx.fillStyle = "#ce1126"; ctx.fillRect(x, y + h * 0.32, w, h * 0.04); ctx.fillRect(x, y + h * 0.64, w, h * 0.04);
+      break;
+    default:
+      ctx.fillStyle = "#e2e8f0";
+      ctx.fillRect(x, y, w, h);
+      ctx.fillStyle = "#0f172a";
+      ctx.font = "700 9px Arial, sans-serif";
+      ctx.fillText(country, x + 5, y + h * 0.65);
+  }
+
+  ctx.strokeStyle = "#334155";
+  ctx.lineWidth = 0.8;
+  ctx.strokeRect(x, y, w, h);
+  ctx.restore();
+}
+
+function drawFlagStar(ctx, cx, cy, r, color) {
+  ctx.save();
+  ctx.fillStyle = color;
+  ctx.beginPath();
+  for (let i = 0; i < 10; i++) {
+    const radius = i % 2 === 0 ? r : r * 0.42;
+    const angle = -Math.PI / 2 + i * Math.PI / 5;
+    const px = cx + Math.cos(angle) * radius;
+    const py = cy + Math.sin(angle) * radius;
+    if (i === 0) ctx.moveTo(px, py);
+    else ctx.lineTo(px, py);
+  }
+  ctx.closePath();
+  ctx.fill();
+  ctx.restore();
+}
+
+function drawFlagSun(ctx, cx, cy, r, color) {
+  ctx.save();
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 1;
+  for (let i = 0; i < 12; i++) {
+    const angle = i * Math.PI / 6;
+    ctx.beginPath();
+    ctx.moveTo(cx + Math.cos(angle) * r * 1.2, cy + Math.sin(angle) * r * 1.2);
+    ctx.lineTo(cx + Math.cos(angle) * r * 1.8, cy + Math.sin(angle) * r * 1.8);
+    ctx.stroke();
+  }
+  ctx.fillStyle = color;
+  ctx.beginPath();
+  ctx.arc(cx, cy, r, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+}
+
 
 function drawPdfFooter(ctx, metrics) {
   const { margin, width, height } = metrics;

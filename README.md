@@ -180,3 +180,8 @@ Na aba **Álbum**, use o campo **Buscar país** para localizar rapidamente pelo 
 - A coluna **Bandeira** agora tenta renderizar o ícone visual da bandeira no PDF.
 - Adicionada opção **PDF repetidas** para exportar somente as figurinhas repetidas.
 - O PDF de repetidas mostra bandeira, país, figurinha, quantidade total e quantidade extra.
+
+
+## Correção das bandeiras no PDF
+- Substituída a renderização por emoji por bandeiras desenhadas diretamente no canvas.
+- A coluna **Bandeira** agora aparece no PDF do álbum e no PDF de repetidas, mesmo quando o navegador não renderiza emojis de bandeira no PDF.
