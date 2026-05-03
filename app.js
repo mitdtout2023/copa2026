@@ -61,7 +61,35 @@ function getCountryLabel(country, includeCode = true) {
   return includeCode ? `${meta.flag} ${meta.name} (${country})` : `${meta.flag} ${meta.name}`;
 }
 
-const TOTAL_STICKERS = COUNTRIES.length * STICKERS_PER_COUNTRY;
+const TOTAL_STICKERS = COUNTRIES.reduce((total, country) => total + getStickerNumbers(country).length, 0);
+
+function getStickerNumbers(country) {
+  const start = country === "PANINI" ? 0 : 1;
+  const numbers = [];
+  for (let number = start; number <= STICKERS_PER_COUNTRY; number++) {
+    numbers.push(number);
+  }
+  return numbers;
+}
+
+function isValidStickerNumber(country, number) {
+  return getStickerNumbers(country).includes(number);
+}
+
+function formatStickerNumber(number) {
+  return String(number).padStart(2, "0");
+}
+
+function formatStickerCode(country, number) {
+  return `${country} ${formatStickerNumber(number)}`;
+}
+
+function getStickerRangeLabel(country) {
+  const numbers = getStickerNumbers(country);
+  return `${country} ${formatStickerNumber(numbers[0])} até ${country} ${formatStickerNumber(numbers[numbers.length - 1])}`;
+}
+
+
 const STORAGE_KEY = "figurinhas-copa-2026-state-v2";
 const REMOVE_PASSWORD = "talita10";
 const LEGACY_STORAGE_KEY = "figurinhas-copa-2026-state-v1";
@@ -79,7 +107,7 @@ function createEmptyState() {
   const inventory = {};
   for (const country of COUNTRIES) {
     inventory[country] = {};
-    for (let number = 1; number <= STICKERS_PER_COUNTRY; number++) {
+    for (const number of getStickerNumbers(country)) {
       inventory[country][number] = 0;
     }
   }
@@ -96,7 +124,7 @@ function loadState() {
     const saved = JSON.parse(raw);
     const fresh = createEmptyState();
     for (const country of COUNTRIES) {
-      for (let number = 1; number <= STICKERS_PER_COUNTRY; number++) {
+      for (const number of getStickerNumbers(country)) {
         const value = saved?.inventory?.[country]?.[number];
         fresh.inventory[country][number] = Number.isInteger(value) && value >= 0 ? value : 0;
       }
@@ -263,7 +291,7 @@ function parseStickerCodesStrict(text) {
     const number = Number(rawNumber);
 
     if (!COUNTRIES.includes(country)) continue;
-    if (number < 1 || number > STICKERS_PER_COUNTRY) continue;
+    if (!isValidStickerNumber(country, number)) continue;
 
     items.push({ country, number });
   }
@@ -272,7 +300,7 @@ function parseStickerCodesStrict(text) {
 }
 
 function formatStickerCode(item) {
-  return `${item.country} ${String(item.number).padStart(2, "0")}`;
+  return formatStickerCode(item.country, item.number);
 }
 
 
@@ -282,7 +310,7 @@ function parseSingleStickerCode(rawCode) {
 }
 
 function readStickerByCode() {
-  const rawCode = prompt("Digite ou cole o(s) código(s) da figurinha.\n\nExemplos:\nJPN 10\nJPN 10, JPN 15\nBRA 01, ARG 12");
+  const rawCode = prompt("Digite ou cole o(s) código(s) da figurinha.\n\nExemplos:\nJPN 10\nJPN 10, JPN 15, PANINI 00\nBRA 01, ARG 12");
 
   if (rawCode === null) return;
 
@@ -334,7 +362,7 @@ function applyReadStickerItems(items, source = "foto") {
     for (const item of stickerItems) {
       const currentQty = state.inventory[country][item.number] || 0;
       const nextQty = currentQty + item.qty;
-      const code = `${country} ${String(item.number).padStart(2, "0")}`;
+      const code = formatStickerCode(country, item.number);
 
       state.inventory[country][item.number] = nextQty;
       totalRead += item.qty;
@@ -375,7 +403,7 @@ function getSummary() {
   let physicalTotal = 0;
 
   for (const country of COUNTRIES) {
-    for (let number = 1; number <= STICKERS_PER_COUNTRY; number++) {
+    for (const number of getStickerNumbers(country)) {
       const qty = state.inventory[country][number];
       physicalTotal += qty;
       if (qty === 0) missing += 1;
@@ -412,12 +440,12 @@ function renderAlbum() {
     const physical = countPhysicalByCountry(country);
 
     const header = document.createElement("header");
-    header.innerHTML = `<div><h3>${getCountryLabel(country, false)}</h3><div class="country-code">${country}</div></div><span class="country-stats">${owned}/${STICKERS_PER_COUNTRY} no álbum • ${physical} total • ${dup} extras</span>`;
+    header.innerHTML = `<div><h3>${getCountryLabel(country, false)}</h3><div class="country-code">${country}</div></div><span class="country-stats">${owned}/${getStickerNumbers(country).length} no álbum • ${physical} total • ${dup} extras</span>`;
 
     const grid = document.createElement("div");
     grid.className = "sticker-grid";
 
-    for (let number = 1; number <= STICKERS_PER_COUNTRY; number++) {
+    for (const number of getStickerNumbers(country)) {
       const qty = state.inventory[country][number];
       const button = document.createElement("button");
       button.className = `sticker ${qty === 1 ? "owned" : qty > 1 ? "duplicate" : ""}`;
@@ -436,7 +464,7 @@ function renderAlbum() {
 
 function countOwnedByCountry(country) {
   let count = 0;
-  for (let number = 1; number <= STICKERS_PER_COUNTRY; number++) {
+  for (const number of getStickerNumbers(country)) {
     if (state.inventory[country][number] > 0) count += 1;
   }
   return count;
@@ -444,7 +472,7 @@ function countOwnedByCountry(country) {
 
 function countPhysicalByCountry(country) {
   let count = 0;
-  for (let number = 1; number <= STICKERS_PER_COUNTRY; number++) {
+  for (const number of getStickerNumbers(country)) {
     count += state.inventory[country][number];
   }
   return count;
@@ -452,7 +480,7 @@ function countPhysicalByCountry(country) {
 
 function countDuplicateExtrasByCountry(country) {
   let count = 0;
-  for (let number = 1; number <= STICKERS_PER_COUNTRY; number++) {
+  for (const number of getStickerNumbers(country)) {
     const qty = state.inventory[country][number];
     if (qty > 1) count += qty - 1;
   }
@@ -498,7 +526,7 @@ function resetVisibleCountry() {
 
   if (!requireRemovePassword(`limpar o país ${getCountryLabel(selected)}`)) return;
   if (!confirm(`Limpar todas as figurinhas de ${getCountryLabel(selected)}?`)) return;
-  for (let number = 1; number <= STICKERS_PER_COUNTRY; number++) {
+  for (const number of getStickerNumbers(selected)) {
     state.inventory[selected][number] = 0;
   }
   saveState();
@@ -517,7 +545,7 @@ function getMissingMap() {
   const map = {};
   for (const country of COUNTRIES) {
     const nums = [];
-    for (let number = 1; number <= STICKERS_PER_COUNTRY; number++) {
+    for (const number of getStickerNumbers(country)) {
       if (state.inventory[country][number] === 0) nums.push(number);
     }
     if (nums.length) map[country] = nums;
@@ -529,7 +557,7 @@ function getDuplicatesMap() {
   const map = {};
   for (const country of COUNTRIES) {
     const nums = [];
-    for (let number = 1; number <= STICKERS_PER_COUNTRY; number++) {
+    for (const number of getStickerNumbers(country)) {
       const qty = state.inventory[country][number];
       if (qty > 1) nums.push({ number, qty, extra: qty - 1 });
     }
@@ -624,7 +652,7 @@ function parseStickerText(text) {
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
     .replace(countryNumberRegex, (_, country, rawNumber) => `${country} ${normalizeOcrNumberText(rawNumber)}`)
-    .replace(new RegExp(`\\b(${countryPattern})\\s*[-_./]?\\s*(0?[1-9]|1[0-9]|20)\\b`, "g"), "$1 $2")
+    .replace(new RegExp(`\\b(${countryPattern})\\s*[-_./]?\\s*(0?[0-9]|1[0-9]|20)\\b`, "g"), "$1 $2")
     .replace(/\bN[UÚ]?MERO\b|\bNUMERO\b|\bNRO\b|\bNº\b|\bNO\.?\b/g, " ")
     .replace(/[;|•·]/g, " ")
     .replace(/[,:]/g, " ");
@@ -636,7 +664,7 @@ function parseStickerText(text) {
   // BRA 12 x2
   // BRA 12 qtd 2
   const tokenRegex = new RegExp(
-    `\\bX\\s*([1-9]\\d*)\\b|\\bQTD\\.?\\s*([1-9]\\d*)\\b|\\bQUANTIDADE\\s*([1-9]\\d*)\\b|\\b(${countryPattern})\\b|\\b(0?[1-9]|1[0-9]|20)\\b`,
+    `\\bX\\s*([1-9]\\d*)\\b|\\bQTD\\.?\\s*([1-9]\\d*)\\b|\\bQUANTIDADE\\s*([1-9]\\d*)\\b|\\b(${countryPattern})\\b|\\b(0?[0-9]|1[0-9]|20)\\b`,
     "g"
   );
 
@@ -789,7 +817,7 @@ function groupParsedItems(items) {
   const groups = {};
   for (const item of items) {
     if (!COUNTRIES.includes(item.country)) continue;
-    if (item.number < 1 || item.number > STICKERS_PER_COUNTRY) continue;
+    if (!isValidStickerNumber(item.country, item.number)) continue;
     if (!groups[item.country]) groups[item.country] = new Map();
     groups[item.country].set(item.number, (groups[item.country].get(item.number) || 0) + 1);
   }
@@ -873,7 +901,7 @@ async function importJson(event) {
     const imported = JSON.parse(text);
     const fresh = createEmptyState();
     for (const country of COUNTRIES) {
-      for (let number = 1; number <= STICKERS_PER_COUNTRY; number++) {
+      for (const number of getStickerNumbers(country)) {
         const value = imported?.inventory?.[country]?.[number];
         const legacyFwgValue = country === "FWC" ? imported?.inventory?.FWG?.[number] : undefined;
         const normalizedValue = Number.isInteger(value) && value >= 0 ? value : 0;
@@ -936,10 +964,14 @@ function buildAlbumReportHtml() {
     const meta = getCountryMeta(country);
     const cells = [];
 
-    for (let number = 1; number <= STICKERS_PER_COUNTRY; number++) {
+    for (let number = 0; number <= STICKERS_PER_COUNTRY; number++) {
+      if (!isValidStickerNumber(country, number)) {
+        cells.push(`<td class="sticker-cell unavailable"><strong>-</strong><span></span></td>`);
+        continue;
+      }
       const qty = state.inventory[country][number] || 0;
       const statusClass = qty === 0 ? "missing" : qty === 1 ? "owned" : "duplicate";
-      const code = `${country} ${String(number).padStart(2, "0")}`;
+      const code = formatStickerCode(country, number);
       cells.push(`<td class="sticker-cell ${statusClass}"><strong>${code}</strong><span>qtd ${qty}</span></td>`);
     }
 
@@ -960,7 +992,7 @@ function buildAlbumReportHtml() {
         <thead>
           <tr>
             <th>País</th>
-            ${Array.from({ length: STICKERS_PER_COUNTRY }, (_, index) => `<th>${String(index + 1).padStart(2, "0")}</th>`).join("")}
+            ${Array.from({ length: STICKERS_PER_COUNTRY + 1 }, (_, index) => `<th>${formatStickerNumber(index)}</th>`).join("")}
           </tr>
         </thead>
         <tbody>${rows}</tbody>
@@ -1132,6 +1164,11 @@ function buildReportDocument({ title, summary, body, hideHeaderCredit = false, h
       border-color: #ea580c;
     }
 
+    .unavailable {
+      background: #f1f5f9;
+      color: #94a3b8;
+    }
+
     .duplicates-table th,
     .duplicates-table td {
       font-size: 10px;
@@ -1218,7 +1255,7 @@ function getDuplicateRows() {
   const rows = [];
 
   for (const country of COUNTRIES) {
-    for (let number = 1; number <= STICKERS_PER_COUNTRY; number++) {
+    for (const number of getStickerNumbers(country)) {
       const qty = state.inventory[country][number] || 0;
       if (qty > 1) {
         rows.push({
@@ -1226,7 +1263,7 @@ function getDuplicateRows() {
           number,
           qty,
           extra: qty - 1,
-          code: `${country} ${String(number).padStart(2, "0")}`
+          code: formatStickerCode(country, number)
         });
       }
     }
@@ -1375,6 +1412,11 @@ function buildPrintDocument({ title, summary, body, hideHeaderCredit = false, hi
     .duplicate {
       background: #fed7aa;
       border-color: #ea580c;
+    }
+
+    .unavailable {
+      background: #f1f5f9;
+      color: #94a3b8;
     }
 
     .duplicates-table th,
@@ -1551,7 +1593,7 @@ function buildPdfReportLines() {
     const physical = countPhysicalByCountry(country);
     const extras = countDuplicateExtrasByCountry(country);
     const missing = [];
-    for (let number = 1; number <= STICKERS_PER_COUNTRY; number++) {
+    for (const number of getStickerNumbers(country)) {
       if (state.inventory[country][number] === 0) missing.push(number);
     }
     const missingText = missing.length ? missing.join(", ") : "nenhuma";

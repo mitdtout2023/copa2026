@@ -282,3 +282,10 @@ Na aba **Álbum**, use o campo **Buscar país** para localizar rapidamente pelo 
 - Cada novo código possui figurinhas de `01` até `20`.
 - Na tela **Repetidas**, o texto `sobra` foi alterado para `repetidas:`.
 - A tela **Repetidas** agora exibe o código e a quantidade de repetidas, sem mostrar a quantidade total.
+
+
+## Correção PANINI
+- Somente o código **PANINI** começa em `00`.
+- **PANINI** agora possui figurinhas de `PANINI 00` até `PANINI 20`.
+- Todos os demais países/códigos continuam de `01` até `20`.
+- O relatório do álbum passa a exibir a coluna `00`; para países diferentes de PANINI, a coluna `00` aparece como indisponível.
