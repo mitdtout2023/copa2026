@@ -149,6 +149,8 @@ function setupCountryFilter() {
 
 function setupEvents() {
   $("countryFilter").addEventListener("change", renderAlbum);
+  $("readStickerButton").addEventListener("click", readStickerByCode);
+  $("singleStickerImageInput").addEventListener("change", handleSingleStickerImage);
   $("toggleRemoveMode").addEventListener("click", toggleRemoveMode);
   $("resetVisibleCountry").addEventListener("click", resetVisibleCountry);
   $("copyMissing").addEventListener("click", () => copyText(buildMissingText()));
@@ -226,6 +228,140 @@ function renderRemoveModeUi() {
     button.classList.add("ghost");
     help.textContent = "Se ela já estiver no álbum, o toque soma como repetida. Para remover do álbum, use o botão Remover figurinha com senha.";
   }
+}
+
+
+
+function parseSingleStickerCode(rawCode) {
+  const items = parseStickerText(rawCode);
+  return items.length ? items[0] : null;
+}
+
+function readStickerByCode() {
+  const input = $("singleStickerImageInput");
+
+  if (!input) {
+    readStickerManualFallback();
+    return;
+  }
+
+  input.value = "";
+  input.click();
+}
+
+async function handleSingleStickerImage(event) {
+  const file = event.target.files?.[0];
+  if (!file) return;
+
+  const status = $("saveStatus");
+  const oldStatus = status ? status.textContent : "";
+
+  try {
+    if (status) status.textContent = "Lendo imagem da figurinha...";
+
+    const text = await recognizeStickerTextFromImage(file);
+    const items = parseStickerText(text);
+
+    if (!items.length) {
+      const manualCode = prompt(`Não consegui identificar automaticamente o código da figurinha. Texto lido: ${text || "(vazio)"}\n\nDigite o código manualmente, exemplo: JPN 15`);
+      if (manualCode === null) return;
+
+      const manualItems = parseStickerText(manualCode);
+      if (!manualItems.length) {
+        alert("Código inválido. Use o formato JPN 15, BRA 01, ARG 12 etc.");
+        return;
+      }
+
+      applyReadStickerItems(manualItems, "manual");
+      return;
+    }
+
+    applyReadStickerItems(items, "foto");
+  } catch (error) {
+    const manualCode = prompt(`Não foi possível ler a imagem automaticamente. Digite o código manualmente, exemplo: JPN 15.\n\nErro: ${error.message}`);
+    if (manualCode === null) return;
+
+    const manualItems = parseStickerText(manualCode);
+    if (!manualItems.length) {
+      alert("Código inválido. Use o formato JPN 15, BRA 01, ARG 12 etc.");
+      return;
+    }
+
+    applyReadStickerItems(manualItems, "manual");
+  } finally {
+    if (status) status.textContent = oldStatus || "Dados salvos localmente.";
+    event.target.value = "";
+  }
+}
+
+async function recognizeStickerTextFromImage(file) {
+  await loadTesseractIfNeeded();
+
+  const result = await Tesseract.recognize(file, "eng", {
+    tessedit_char_whitelist: "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 "
+  });
+
+  return result?.data?.text || "";
+}
+
+function loadTesseractIfNeeded() {
+  if (window.Tesseract) return Promise.resolve();
+
+  return new Promise((resolve, reject) => {
+    const script = document.createElement("script");
+    script.src = "https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js";
+    script.async = true;
+    script.onload = () => resolve();
+    script.onerror = () => reject(new Error("Não foi possível carregar o leitor de imagem. Verifique a internet ou digite o código manualmente."));
+    document.head.appendChild(script);
+  });
+}
+
+function readStickerManualFallback() {
+  const rawCode = prompt("Digite ou cole o código da figurinha. Exemplo: JPN 15");
+  if (rawCode === null) return;
+
+  const items = parseStickerText(rawCode);
+
+  if (!items.length) {
+    alert("Código inválido. Use o formato JPN 15, BRA 01, ARG 12 etc.");
+    return;
+  }
+
+  applyReadStickerItems(items, "manual");
+}
+
+function applyReadStickerItems(items, source = "foto") {
+  const grouped = groupParsedItems(items);
+  const messages = [];
+  let totalRead = 0;
+
+  for (const [country, stickerItems] of Object.entries(grouped)) {
+    for (const item of stickerItems) {
+      const currentQty = state.inventory[country][item.number] || 0;
+      const nextQty = currentQty + item.qty;
+      const code = `${country} ${String(item.number).padStart(2, "0")}`;
+
+      state.inventory[country][item.number] = nextQty;
+      totalRead += item.qty;
+
+      if (currentQty === 0 && nextQty === 1) {
+        messages.push(`${code}: adicionada ao álbum.`);
+      } else if (currentQty === 0 && nextQty > 1) {
+        messages.push(`${code}: adicionada ao álbum e ${nextQty - 1} repetida(s).`);
+      } else if (currentQty === 1) {
+        messages.push(`${code}: já existia; agora está em Repetidas.`);
+      } else {
+        messages.push(`${code}: repetida atualizada para qtd. ${nextQty}.`);
+      }
+    }
+  }
+
+  saveState();
+  renderAll();
+
+  const sourceLabel = source === "foto" ? "Leitura da foto concluída" : "Leitura manual concluída";
+  alert(`${sourceLabel}.\nTotal lido: ${totalRead}\n\n${messages.slice(0, 8).join("\n")}${messages.length > 8 ? "\n..." : ""}`);
 }
 
 
@@ -478,12 +614,22 @@ async function copyText(text) {
   }
 }
 
+function normalizeOcrNumberText(value) {
+  return String(value || "")
+    .toUpperCase()
+    .replace(/O/g, "0")
+    .replace(/[IL]/g, "1")
+    .replace(/S/g, "5");
+}
+
 function parseStickerText(text) {
   const countryPattern = COUNTRIES.join("|");
+  const countryNumberRegex = new RegExp(`\\b(${countryPattern})\\s*[-_./]?\\s*([0-9OILS]{1,2})\\b`, "g");
   const normalized = text
     .toUpperCase()
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
+    .replace(countryNumberRegex, (_, country, rawNumber) => `${country} ${normalizeOcrNumberText(rawNumber)}`)
     .replace(/([A-Z]{3})\s*[-_./]?\s*(0?[1-9]|1[0-9]|20)\b/g, "$1 $2")
     .replace(/\bN[UÚ]?MERO\b|\bNUMERO\b|\bNRO\b|\bNº\b|\bNO\.?\b/g, " ")
     .replace(/[;|•·]/g, " ")

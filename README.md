@@ -219,3 +219,11 @@ Na aba **Álbum**, use o campo **Buscar país** para localizar rapidamente pelo 
 - O botão **Relatório repetidas** agora salva um arquivo de relatório diretamente, sem abrir impressão.
 - No relatório álbum, removida a coluna **Álbum**.
 - No relatório álbum, removido o item **Tipos repetidos** do resumo.
+
+
+## Atualização: Ler figurinha por foto
+- O botão **Ler figurinha** agora abre câmera/upload de imagem.
+- O app tenta identificar códigos como `JPN 10`, `JPN 15`, `BRA 01`.
+- Se a figurinha ainda não existir, atualiza o álbum.
+- Se já existir, soma como repetida automaticamente.
+- Se a leitura automática falhar, o app pede o código manualmente.

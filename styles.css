@@ -162,7 +162,7 @@ main {
 
 .toolbar {
   display: grid;
-  grid-template-columns: 1fr 1.2fr auto auto;
+  grid-template-columns: 1fr 1.2fr auto auto auto;
   gap: 12px;
   align-items: end;
 }
@@ -703,5 +703,22 @@ button.pill {
   .backup-actions .file-button {
     font-size: 10px;
     padding: 7px 4px;
+  }
+}
+
+/* Botão Ler figurinha */
+#readStickerButton {
+  white-space: nowrap;
+}
+
+@media (max-width: 760px) {
+  .toolbar {
+    grid-template-columns: 1fr;
+  }
+
+  #readStickerButton,
+  #toggleRemoveMode,
+  #resetVisibleCountry {
+    width: 100%;
   }
 }

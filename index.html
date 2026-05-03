@@ -62,8 +62,9 @@
         </label>
         <div class="tap-help">
           <strong>Toque na figurinha para adicionar +1.</strong>
-          <span id="tapHelpText">Se ela já estiver no álbum, o toque soma como repetida. Para remover do álbum, use o botão Remover figurinha com senha.</span>
+          <span id="tapHelpText">Use “Ler figurinha” para tirar/enviar foto do código. Se já existir, entra como repetida; se não existir, atualiza o álbum.</span>
         </div>
+        <button id="readStickerButton" class="primary">Ler figurinha</button>
         <button id="toggleRemoveMode" class="ghost">Remover figurinha</button>
         <button id="resetVisibleCountry" class="ghost">Limpar país</button>
       </div>
@@ -74,6 +75,7 @@
         <span><i class="dot duplicate-dot"></i>repetida</span>
       </div>
 
+      <input id="singleStickerImageInput" class="hidden" type="file" accept="image/*" capture="environment" />
       <div id="albumGrid" class="album-grid"></div>
     </section>
 
