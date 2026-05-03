@@ -805,3 +805,19 @@ button.pill {
   color: var(--ink);
   font-size: 15px;
 }
+
+.sync-actions {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+@media (max-width: 720px) {
+  .sync-actions {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media (max-width: 430px) {
+  .sync-actions {
+    grid-template-columns: 1fr;
+  }
+}

@@ -358,3 +358,19 @@ TUR, CUW, HAI, IRQ, JOR, CPV, EGY, NZL
 Novos códigos seguem a regra geral de `01` até `20`, exceto **PANINI**, que permanece de `00` até `20`.
 
 A lista do app agora contempla os países informados da CONMEBOL, UEFA, CONCACAF, AFC, CAF e OFC, mantendo também os códigos especiais já existentes, como **FWC** e **PANINI**.
+
+
+## Correção da sincronização computador → iPhone
+
+Agora existem duas formas de sincronizar:
+
+### Enviar TXT
+Use quando quiser enviar apenas um texto/lista de figurinhas.
+
+### Enviar álbum
+Use quando você digitou, clicou ou atualizou figurinhas no computador e quer que o iPhone reflita o álbum completo.
+
+Importante:
+- Atualize também o código do Google Apps Script com o novo arquivo `google-apps-script-sync.gs`.
+- O iPhone precisa estar usando esta versão do app.
+- Use o mesmo URL do Google Apps Script e o mesmo Código de sincronização no computador e no iPhone.

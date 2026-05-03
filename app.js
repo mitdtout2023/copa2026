@@ -205,6 +205,7 @@ function setupEvents() {
   $("clearManualText").addEventListener("click", clearManualText);
   $("saveSyncConfig").addEventListener("click", saveSyncConfigFromForm);
   $("sendTextToSync").addEventListener("click", sendTextToSync);
+  $("sendAlbumToSync").addEventListener("click", sendAlbumToSync);
   $("syncNow").addEventListener("click", () => syncFromCloud({ manual: true }));
   $("autoSyncEnabled").addEventListener("change", saveSyncConfigFromForm);
   $("applyParsed").addEventListener("click", () => applyParsedItems({ silent: false, allowRepeat: true }));
@@ -754,6 +755,90 @@ function validateSyncConfig() {
   return { endpoint, syncId, autoSync: $("autoSyncEnabled").checked };
 }
 
+
+async function sendAlbumToSync() {
+  const config = validateSyncConfig();
+  if (!config) return;
+
+  localStorage.setItem(SYNC_CONFIG_STORAGE, JSON.stringify(config));
+
+  const payload = {
+    action: "pushState",
+    syncId: config.syncId,
+    state: exportSerializableState(),
+    createdAt: new Date().toISOString()
+  };
+
+  $("aiResult").textContent = "Enviando álbum completo para o iPhone...";
+
+  try {
+    const response = await fetch(config.endpoint, {
+      method: "POST",
+      body: JSON.stringify(payload)
+    });
+
+    const data = await response.json();
+
+    if (!data.ok) {
+      throw new Error(data.error || "Falha ao enviar álbum.");
+    }
+
+    $("aiResult").textContent = [
+      "Álbum completo enviado para sincronização.",
+      "",
+      `Código de sincronização: ${config.syncId}`,
+      `Versão: ${data.version || "(sem versão)"}`,
+      "",
+      "No iPhone, deixe o app aberto com a sincronização automática ligada ou toque em “Sincronizar agora”."
+    ].join("\n");
+
+    alert("Álbum enviado. O iPhone será atualizado quando sincronizar.");
+  } catch (error) {
+    alert(`Erro ao enviar álbum para sincronização: ${error.message}`);
+  }
+}
+
+function exportSerializableState() {
+  const normalized = createEmptyState();
+
+  for (const country of COUNTRIES) {
+    for (const number of getStickerNumbers(country)) {
+      const qty = state.inventory?.[country]?.[number] || 0;
+      normalized.inventory[country][number] = Number.isInteger(qty) && qty >= 0 ? qty : 0;
+    }
+  }
+
+  normalized.updatedAt = new Date().toISOString();
+  return normalized;
+}
+
+function applySyncedState(remoteState) {
+  if (!remoteState || !remoteState.inventory) {
+    throw new Error("Estado sincronizado inválido.");
+  }
+
+  const fresh = createEmptyState();
+
+  for (const country of COUNTRIES) {
+    for (const number of getStickerNumbers(country)) {
+      const value = remoteState.inventory?.[country]?.[number];
+      const legacyFwgValue = country === "FWC" ? remoteState.inventory?.FWG?.[number] : undefined;
+      const normalizedValue = Number.isInteger(value) && value >= 0 ? value : 0;
+      const normalizedLegacyFwgValue = Number.isInteger(legacyFwgValue) && legacyFwgValue >= 0 ? legacyFwgValue : 0;
+
+      fresh.inventory[country][number] = country === "FWC"
+        ? Math.max(normalizedValue, normalizedLegacyFwgValue)
+        : normalizedValue;
+    }
+  }
+
+  fresh.updatedAt = new Date().toISOString();
+  state = fresh;
+  saveState();
+  renderAll();
+}
+
+
 async function sendTextToSync() {
   const config = validateSyncConfig();
   if (!config) return;
@@ -779,7 +864,7 @@ async function sendTextToSync() {
     createdAt: new Date().toISOString()
   };
 
-  $("aiResult").textContent = "Enviando lista para sincronização...";
+  $("aiResult").textContent = "Enviando TXT para sincronização...";
 
   try {
     const response = await fetch(config.endpoint, {
@@ -794,7 +879,7 @@ async function sendTextToSync() {
     }
 
     $("aiResult").textContent = [
-      "Lista enviada para a nuvem.",
+      "TXT enviado para a nuvem.",
       "",
       `Figurinhas identificadas: ${items.length}`,
       `Código de sincronização: ${config.syncId}`,
@@ -844,14 +929,34 @@ async function syncFromCloud({ manual = false } = {}) {
       throw new Error(data.error || "Falha ao consultar sincronização.");
     }
 
-    if (!data.text || !data.version) {
-      if (manual) alert("Nenhuma lista foi enviada ainda para este código de sincronização.");
+    if ((!data.text && !data.state) || !data.version) {
+      if (manual) alert("Nenhum dado foi enviado ainda para este código de sincronização.");
       return;
     }
 
     const lastApplied = localStorage.getItem(SYNC_LAST_APPLIED_STORAGE);
     if (lastApplied === data.version) {
-      if (manual) alert("O iPhone já está atualizado com a última lista enviada.");
+      if (manual) alert("O iPhone já está atualizado com a última versão enviada.");
+      return;
+    }
+
+    if (data.state) {
+      const confirmed = manual
+        ? confirm("Álbum completo encontrado na sincronização.\n\nDeseja substituir/atualizar o álbum deste iPhone com o álbum enviado pelo computador?")
+        : true;
+
+      if (!confirmed) return;
+
+      applySyncedState(data.state);
+      localStorage.setItem(SYNC_LAST_APPLIED_STORAGE, data.version);
+
+      if (manual) {
+        alert("Álbum do iPhone atualizado com o álbum enviado pelo computador.");
+      } else {
+        const status = $("saveStatus");
+        if (status) status.textContent = `Álbum sincronizado automaticamente em ${new Date().toLocaleString("pt-BR")}.`;
+      }
+
       return;
     }
 
@@ -862,7 +967,7 @@ async function syncFromCloud({ manual = false } = {}) {
     }
 
     const confirmed = manual
-      ? confirm(`Lista encontrada na sincronização.\n\nFigurinhas identificadas: ${items.length}\n\nDeseja atualizar o álbum deste iPhone?`)
+      ? confirm(`TXT encontrado na sincronização.\n\nFigurinhas identificadas: ${items.length}\n\nDeseja atualizar o álbum deste iPhone?`)
       : true;
 
     if (!confirmed) return;
@@ -877,10 +982,10 @@ async function syncFromCloud({ manual = false } = {}) {
     localStorage.setItem(SYNC_LAST_APPLIED_STORAGE, data.version);
 
     if (manual) {
-      alert("Álbum atualizado com a lista sincronizada.");
+      alert("Álbum atualizado com o TXT sincronizado.");
     } else {
       const status = $("saveStatus");
-      if (status) status.textContent = `Sincronizado automaticamente em ${new Date().toLocaleString("pt-BR")}.`;
+      if (status) status.textContent = `TXT sincronizado automaticamente em ${new Date().toLocaleString("pt-BR")}.`;
     }
   } catch (error) {
     if (manual) alert(`Erro ao sincronizar: ${error.message}`);

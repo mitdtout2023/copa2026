@@ -15,33 +15,49 @@ function doPost(e) {
     var body = JSON.parse(e.postData.contents || "{}");
     var action = body.action;
     var syncId = String(body.syncId || "").trim();
-    var text = String(body.text || "");
-
-    if (action !== "push") {
-      return jsonOutput({ ok: false, error: "Ação inválida." });
-    }
 
     if (!syncId) {
       return jsonOutput({ ok: false, error: "syncId obrigatório." });
     }
 
-    if (!text) {
-      return jsonOutput({ ok: false, error: "Texto obrigatório." });
-    }
-
     var version = new Date().toISOString();
     var props = PropertiesService.getScriptProperties();
 
-    props.setProperty("sync:" + syncId, JSON.stringify({
-      text: text,
-      version: version,
-      updatedAt: version
-    }));
+    if (action === "push") {
+      var text = String(body.text || "");
 
-    return jsonOutput({
-      ok: true,
-      version: version
-    });
+      if (!text) {
+        return jsonOutput({ ok: false, error: "Texto obrigatório." });
+      }
+
+      props.setProperty("sync:" + syncId, JSON.stringify({
+        type: "text",
+        text: text,
+        state: null,
+        version: version,
+        updatedAt: version
+      }));
+
+      return jsonOutput({ ok: true, version: version, type: "text" });
+    }
+
+    if (action === "pushState") {
+      if (!body.state || !body.state.inventory) {
+        return jsonOutput({ ok: false, error: "Estado do álbum obrigatório." });
+      }
+
+      props.setProperty("sync:" + syncId, JSON.stringify({
+        type: "state",
+        text: "",
+        state: body.state,
+        version: version,
+        updatedAt: version
+      }));
+
+      return jsonOutput({ ok: true, version: version, type: "state" });
+    }
+
+    return jsonOutput({ ok: false, error: "Ação inválida." });
   } catch (err) {
     return jsonOutput({ ok: false, error: String(err) });
   }
@@ -61,7 +77,9 @@ function doGet(e) {
     if (!raw) {
       return jsonOutput({
         ok: true,
+        type: "",
         text: "",
+        state: null,
         version: "",
         updatedAt: ""
       });
@@ -71,7 +89,9 @@ function doGet(e) {
 
     return jsonOutput({
       ok: true,
+      type: data.type || "",
       text: data.text || "",
+      state: data.state || null,
       version: data.version || "",
       updatedAt: data.updatedAt || ""
     });
