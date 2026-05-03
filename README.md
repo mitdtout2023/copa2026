@@ -205,3 +205,10 @@ Na aba **Álbum**, use o campo **Buscar país** para localizar rapidamente pelo 
 - O botão **Relatório álbum** abre a opção de impressão/salvamento do navegador.
 - No relatório de repetidas, removida a coluna **Quantidade**.
 - Coluna **Repetidas extras** renomeada para **Repetidas**.
+
+
+## Ajuste no Relatório Repetidas
+- Removido o resumo `Tipos repetidos | Repetidas`.
+- Removido `Criado por Marcelo Ferreira` do cabeçalho do relatório repetidas.
+- Removida a legenda de cores do relatório repetidas.
+- Mantido o título, data/hora de geração e a tabela de repetidas.

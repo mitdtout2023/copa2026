@@ -846,7 +846,7 @@ function buildDuplicatesPrintHtml(rows) {
 
   return buildPrintDocument({
     title: "Copa 2026 - Figurinhas Repetidas",
-    summary: `Tipos repetidos: ${summary.duplicateTypes} | Repetidas: ${summary.duplicateExtras}`,
+    summary: "",
     body: `
       <table class="duplicates-table">
         <thead>
@@ -858,11 +858,13 @@ function buildDuplicatesPrintHtml(rows) {
         </thead>
         <tbody>${tableRows}</tbody>
       </table>
-    `
+    `,
+    hideHeaderCredit: true,
+    hideLegend: true
   });
 }
 
-function buildPrintDocument({ title, summary, body }) {
+function buildPrintDocument({ title, summary, body, hideHeaderCredit = false, hideLegend = false }) {
   return `<!doctype html>
 <html lang="pt-BR">
 <head>
@@ -1058,14 +1060,14 @@ function buildPrintDocument({ title, summary, body }) {
     <header>
       <div>
         <h1>${escapeHtml(title)}</h1>
-        <div class="meta">${escapeHtml(summary)}<br>Gerado em ${escapeHtml(new Date().toLocaleString("pt-BR"))}</div>
+        <div class="meta">${summary ? `${escapeHtml(summary)}<br>` : ""}Gerado em ${escapeHtml(new Date().toLocaleString("pt-BR"))}</div>
       </div>
-      <div class="credit">Criado por Marcelo Ferreira</div>
+      ${hideHeaderCredit ? "" : '<div class="credit">Criado por Marcelo Ferreira</div>'}
     </header>
 
     ${body}
 
-    <div class="legend">Legenda: vermelho = faltante | verde = Total no álbum | laranja = repetida</div>
+    ${hideLegend ? "" : '<div class="legend">Legenda: vermelho = faltante | verde = Total no álbum | laranja = repetida</div>'}
 
     <footer>
       <span>Copa 2026</span>
