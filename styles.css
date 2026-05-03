@@ -162,7 +162,7 @@ main {
 
 .toolbar {
   display: grid;
-  grid-template-columns: 1fr 1.2fr auto auto auto;
+  grid-template-columns: 1fr 1.2fr auto auto auto auto;
   gap: 12px;
   align-items: end;
 }
@@ -717,6 +717,25 @@ button.pill {
   }
 
   #readStickerButton,
+  #toggleRemoveMode,
+  #resetVisibleCountry {
+    width: 100%;
+  }
+}
+
+/* Botão Ler foto individual */
+#readStickerButton,
+#readStickerPhotoButton {
+  white-space: nowrap;
+}
+
+@media (max-width: 760px) {
+  .toolbar {
+    grid-template-columns: 1fr;
+  }
+
+  #readStickerButton,
+  #readStickerPhotoButton,
   #toggleRemoveMode,
   #resetVisibleCountry {
     width: 100%;

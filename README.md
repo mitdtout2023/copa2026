@@ -241,3 +241,19 @@ Na aba **Álbum**, use o campo **Buscar país** para localizar rapidamente pelo 
 - Inclui foco em faixa superior, lado direito superior e regiões de código.
 - Isso melhora a leitura quando aparecem duas figurinhas parcialmente sobrepostas, como `JPN 10` e `JPN 15`.
 - Continua ignorando números soltos que não estejam junto de um código de país.
+
+
+## Correção: Ler figurinha rápido
+- Removida a leitura por OCR/foto, pois era lenta no iPhone e podia capturar códigos errados.
+- O botão **Ler figurinha** agora abre um campo para digitar ou colar códigos.
+- Aceita uma ou várias figurinhas de uma vez, por exemplo: `JPN 10, JPN 15`.
+- Se a figurinha não existe, atualiza o álbum.
+- Se já existe, soma como repetida.
+
+
+## Atualização: leitura por foto individual
+- Adicionado botão **Ler foto individual**.
+- O botão **Ler figurinha** continua rápido para digitação manual.
+- A leitura por foto processa uma figurinha por vez e prioriza a região superior direita da imagem.
+- Antes de atualizar o álbum, o app confirma o código identificado.
+- Se a leitura falhar, o app pede o código manualmente.

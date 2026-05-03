@@ -150,7 +150,8 @@ function setupCountryFilter() {
 function setupEvents() {
   $("countryFilter").addEventListener("change", renderAlbum);
   $("readStickerButton").addEventListener("click", readStickerByCode);
-  $("singleStickerImageInput").addEventListener("change", handleSingleStickerImage);
+  $("readStickerPhotoButton").addEventListener("click", readStickerByPhoto);
+  $("singleStickerPhotoInput").addEventListener("change", handleSingleStickerPhoto);
   $("toggleRemoveMode").addEventListener("click", toggleRemoveMode);
   $("resetVisibleCountry").addEventListener("click", resetVisibleCountry);
   $("copyMissing").addEventListener("click", () => copyText(buildMissingText()));
@@ -244,7 +245,8 @@ function parseStickerCodesStrict(text) {
     .replace(/A\s*R\s*G/g, "ARG")
     .replace(/U\s*S\s*A/g, "USA")
     .replace(/[|;:•·]/g, " ")
-    .replace(/\s+/g, " ");
+    .replace(/\s+/g, " ")
+    .trim();
 
   const directCodeRegex = new RegExp(`\\b(${countryPattern})\\s*[-_./]?\\s*([0-9OILS]{1,2})\\b`, "g");
   const items = [];
@@ -261,17 +263,7 @@ function parseStickerCodesStrict(text) {
     items.push({ country, number });
   }
 
-  const unique = [];
-  const seen = new Set();
-
-  for (const item of items) {
-    const key = `${item.country}-${item.number}`;
-    if (seen.has(key)) continue;
-    seen.add(key);
-    unique.push(item);
-  }
-
-  return unique;
+  return items;
 }
 
 function formatStickerCode(item) {
@@ -280,15 +272,30 @@ function formatStickerCode(item) {
 
 
 function parseSingleStickerCode(rawCode) {
-  const items = parseStickerText(rawCode);
+  const items = parseStickerCodesStrict(rawCode);
   return items.length ? items[0] : null;
 }
 
 function readStickerByCode() {
-  const input = $("singleStickerImageInput");
+  const rawCode = prompt("Digite ou cole o(s) código(s) da figurinha.\n\nExemplos:\nJPN 10\nJPN 10, JPN 15\nBRA 01, ARG 12");
+
+  if (rawCode === null) return;
+
+  const items = parseStickerCodesStrict(rawCode);
+
+  if (!items.length) {
+    alert("Código inválido. Use o formato JPN 10, BRA 01, ARG 12 etc.");
+    return;
+  }
+
+  applyReadStickerItems(items, "manual");
+}
+
+function readStickerByPhoto() {
+  const input = $("singleStickerPhotoInput");
 
   if (!input) {
-    readStickerManualFallback();
+    alert("Campo de foto não encontrado. Use o botão Ler figurinha para digitar o código.");
     return;
   }
 
@@ -296,24 +303,21 @@ function readStickerByCode() {
   input.click();
 }
 
-async function handleSingleStickerImage(event) {
+async function handleSingleStickerPhoto(event) {
   const file = event.target.files?.[0];
   if (!file) return;
 
   const status = $("saveStatus");
-  const oldStatus = status ? status.textContent : "";
+  const previousStatus = status ? status.textContent : "";
 
   try {
-    if (status) status.textContent = "Lendo imagem da figurinha...";
+    if (status) status.textContent = "Lendo foto individual da figurinha...";
 
-    const text = await recognizeStickerTextFromImage(file);
-
-    // Para foto, usamos leitura estrita: somente códigos completos, como JPN 10.
-    // Isso evita que números soltos da imagem, como 2026, licença ou lote, sejam importados.
+    const text = await recognizeSingleStickerPhoto(file);
     const items = parseStickerCodesStrict(text);
 
     if (!items.length) {
-      const manualCode = prompt(`Não consegui identificar automaticamente o código da figurinha.\n\nDigite os códigos corretos, exemplo: JPN 10, JPN 15`);
+      const manualCode = prompt("Não consegui ler o código na foto.\n\nDigite o código manualmente, exemplo: JPN 15.");
       if (manualCode === null) return;
 
       const manualItems = parseStickerCodesStrict(manualCode);
@@ -322,15 +326,17 @@ async function handleSingleStickerImage(event) {
         return;
       }
 
-      applyReadStickerItems(manualItems, "manual");
+      applyReadStickerItems([manualItems[0]], "manual");
       return;
     }
 
-    const codes = items.map(formatStickerCode).join(", ");
-    const confirmed = confirm(`Códigos identificados na foto:\n\n${codes}\n\nDeseja atualizar o álbum com estes códigos?`);
+    // Leitura individual: aplica somente o primeiro código encontrado.
+    const item = items[0];
+    const code = `${item.country} ${String(item.number).padStart(2, "0")}`;
+    const confirmed = confirm(`Código identificado: ${code}\n\nDeseja atualizar o álbum com esta figurinha?`);
 
     if (!confirmed) {
-      const manualCode = prompt("Digite manualmente os códigos corretos. Exemplo: JPN 10, JPN 15");
+      const manualCode = prompt("Digite o código correto manualmente, exemplo: JPN 15.");
       if (manualCode === null) return;
 
       const manualItems = parseStickerCodesStrict(manualCode);
@@ -339,13 +345,13 @@ async function handleSingleStickerImage(event) {
         return;
       }
 
-      applyReadStickerItems(manualItems, "manual");
+      applyReadStickerItems([manualItems[0]], "manual");
       return;
     }
 
-    applyReadStickerItems(items, "foto");
+    applyReadStickerItems([item], "foto");
   } catch (error) {
-    const manualCode = prompt(`Não foi possível ler a imagem automaticamente. Digite o código manualmente, exemplo: JPN 15.\n\nErro: ${error.message}`);
+    const manualCode = prompt(`A leitura por foto falhou ou ficou lenta.\n\nDigite o código manualmente, exemplo: JPN 15.\n\nErro: ${error.message}`);
     if (manualCode === null) return;
 
     const manualItems = parseStickerCodesStrict(manualCode);
@@ -354,39 +360,51 @@ async function handleSingleStickerImage(event) {
       return;
     }
 
-    applyReadStickerItems(manualItems, "manual");
+    applyReadStickerItems([manualItems[0]], "manual");
   } finally {
-    if (status) status.textContent = oldStatus || "Dados salvos localmente.";
+    if (status) status.textContent = previousStatus || "Dados salvos localmente.";
     event.target.value = "";
   }
 }
 
-async function recognizeStickerTextFromImage(file) {
+async function recognizeSingleStickerPhoto(file) {
   await loadTesseractIfNeeded();
 
   const image = await loadImageFromFile(file);
-  const variants = buildStickerCodeImageVariants(image);
+
+  // Leitura individual: processa somente a região superior direita,
+  // onde normalmente fica o código da figurinha, para ser mais rápido.
+  const variants = buildSingleStickerPhotoVariants(image);
   const texts = [];
 
-  // Faz OCR em regiões diferentes da imagem.
-  // Isso ajuda quando há mais de uma figurinha na foto ou quando uma está parcialmente sobreposta.
   for (const variant of variants) {
     try {
       const result = await Tesseract.recognize(variant.dataUrl, "eng", {
         tessedit_char_whitelist: "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 ",
-        tessedit_pageseg_mode: "11"
+        tessedit_pageseg_mode: "7"
       });
 
       const text = result?.data?.text || "";
-      if (text.trim()) {
-        texts.push(`[${variant.name}]\n${text}`);
-      }
+      if (text.trim()) texts.push(text);
     } catch (error) {
-      console.warn(`Falha no OCR da região ${variant.name}`, error);
+      console.warn(`Falha OCR individual: ${variant.name}`, error);
     }
   }
 
   return texts.join("\n");
+}
+
+function loadTesseractIfNeeded() {
+  if (window.Tesseract) return Promise.resolve();
+
+  return new Promise((resolve, reject) => {
+    const script = document.createElement("script");
+    script.src = "https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js";
+    script.async = true;
+    script.onload = () => resolve();
+    script.onerror = () => reject(new Error("Não foi possível carregar o leitor de foto. Verifique a internet ou digite o código manualmente."));
+    document.head.appendChild(script);
+  });
 }
 
 function loadImageFromFile(file) {
@@ -401,38 +419,37 @@ function loadImageFromFile(file) {
 
     image.onerror = () => {
       URL.revokeObjectURL(url);
-      reject(new Error("Não foi possível carregar a imagem selecionada."));
+      reject(new Error("Não foi possível carregar a foto selecionada."));
     };
 
     image.src = url;
   });
 }
 
-function buildStickerCodeImageVariants(image) {
+function buildSingleStickerPhotoVariants(image) {
   const w = image.naturalWidth || image.width;
   const h = image.naturalHeight || image.height;
 
+  // Para leitura individual, fotografe uma figurinha por vez e tente deixar
+  // o código no canto superior direito da imagem.
   const crops = [
-    { name: "imagem completa", x: 0, y: 0, w, h },
-    { name: "faixa superior", x: 0, y: 0, w, h: Math.floor(h * 0.48) },
-    { name: "lado direito superior", x: Math.floor(w * 0.42), y: 0, w: Math.floor(w * 0.58), h: Math.floor(h * 0.48) },
-    { name: "codigo superior direito", x: Math.floor(w * 0.48), y: Math.floor(h * 0.08), w: Math.floor(w * 0.44), h: Math.floor(h * 0.18) },
-    { name: "codigo meio direito", x: Math.floor(w * 0.48), y: Math.floor(h * 0.22), w: Math.floor(w * 0.44), h: Math.floor(h * 0.22) },
-    { name: "faixa de codigos direita", x: Math.floor(w * 0.40), y: Math.floor(h * 0.06), w: Math.floor(w * 0.56), h: Math.floor(h * 0.42) }
+    { name: "superior direito", x: Math.floor(w * 0.42), y: 0, w: Math.floor(w * 0.58), h: Math.floor(h * 0.34) },
+    { name: "topo completo", x: 0, y: 0, w, h: Math.floor(h * 0.30) },
+    { name: "imagem completa reduzida", x: 0, y: 0, w, h }
   ];
 
   const variants = [];
 
   for (const crop of crops) {
-    variants.push(makeImageVariant(image, crop, false));
-    variants.push(makeImageVariant(image, crop, true));
+    variants.push(makeSingleStickerVariant(image, crop, false));
+    variants.push(makeSingleStickerVariant(image, crop, true));
   }
 
   return variants;
 }
 
-function makeImageVariant(image, crop, highContrast = false) {
-  const scale = highContrast ? 3 : 2;
+function makeSingleStickerVariant(image, crop, highContrast = false) {
+  const scale = highContrast ? 2.2 : 1.7;
   const canvas = document.createElement("canvas");
   canvas.width = Math.max(1, Math.floor(crop.w * scale));
   canvas.height = Math.max(1, Math.floor(crop.h * scale));
@@ -457,9 +474,8 @@ function makeImageVariant(image, crop, highContrast = false) {
 
     for (let i = 0; i < data.length; i += 4) {
       const gray = data[i] * 0.299 + data[i + 1] * 0.587 + data[i + 2] * 0.114;
-      const contrast = Math.max(0, Math.min(255, (gray - 128) * 1.8 + 128));
-      const threshold = contrast > 150 ? 255 : 0;
-
+      const contrast = Math.max(0, Math.min(255, (gray - 128) * 1.7 + 128));
+      const threshold = contrast > 145 ? 255 : 0;
       data[i] = threshold;
       data[i + 1] = threshold;
       data[i + 2] = threshold;
@@ -474,32 +490,20 @@ function makeImageVariant(image, crop, highContrast = false) {
   };
 }
 
-function loadTesseractIfNeeded() {
-  if (window.Tesseract) return Promise.resolve();
 
-  return new Promise((resolve, reject) => {
-    const script = document.createElement("script");
-    script.src = "https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js";
-    script.async = true;
-    script.onload = () => resolve();
-    script.onerror = () => reject(new Error("Não foi possível carregar o leitor de imagem. Verifique a internet ou digite o código manualmente."));
-    document.head.appendChild(script);
-  });
-}
 
-function readStickerManualFallback() {
-  const rawCode = prompt("Digite ou cole o código da figurinha. Exemplo: JPN 15");
-  if (rawCode === null) return;
 
-  const items = parseStickerCodesStrict(rawCode);
 
-  if (!items.length) {
-    alert("Código inválido. Use o formato JPN 15, BRA 01, ARG 12 etc.");
-    return;
-  }
 
-  applyReadStickerItems(items, "manual");
-}
+
+
+
+
+
+
+
+
+
 
 function applyReadStickerItems(items, source = "foto") {
   const grouped = groupParsedItems(items);
@@ -530,7 +534,7 @@ function applyReadStickerItems(items, source = "foto") {
   saveState();
   renderAll();
 
-  const sourceLabel = source === "foto" ? "Leitura da foto concluída" : "Leitura manual concluída";
+  const sourceLabel = "Leitura concluída";
   alert(`${sourceLabel}.\nTotal lido: ${totalRead}\n\n${messages.slice(0, 8).join("\n")}${messages.length > 8 ? "\n..." : ""}`);
 }
 
