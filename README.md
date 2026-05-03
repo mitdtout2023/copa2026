@@ -198,3 +198,10 @@ Na aba **Álbum**, use o campo **Buscar país** para localizar rapidamente pelo 
 - Agora abre um relatório A4 em nova aba e usa a impressão do navegador.
 - No iPhone/Safari, escolha compartilhar/imprimir e salve como PDF.
 - Isso evita o problema de página branca em exportações via canvas/PDF.
+
+
+## Atualização Backup / PDF
+- Botões de backup compactados para caberem em uma linha no iPhone 17 Pro Max.
+- O botão **Relatório álbum** abre a opção de impressão/salvamento do navegador.
+- No relatório de repetidas, removida a coluna **Quantidade**.
+- Coluna **Repetidas extras** renomeada para **Repetidas**.

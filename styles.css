@@ -668,3 +668,40 @@ button.pill {
     flex-wrap: wrap;
   }
 }
+
+/* Botões compactos de Backup / PDF */
+.backup-actions {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 6px;
+  align-items: stretch;
+}
+
+.backup-actions button,
+.backup-actions .file-button {
+  min-height: 38px;
+  padding: 8px 6px;
+  border-radius: 10px;
+  font-size: 11px;
+  line-height: 1.15;
+  text-align: center;
+  white-space: normal;
+}
+
+.backup-actions .file-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+@media (max-width: 390px) {
+  .backup-actions {
+    gap: 4px;
+  }
+
+  .backup-actions button,
+  .backup-actions .file-button {
+    font-size: 10px;
+    padding: 7px 4px;
+  }
+}

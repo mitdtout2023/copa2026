@@ -781,11 +781,12 @@ function openPrintReport(reportHtml, title) {
   printWindow.document.write(reportHtml);
   printWindow.document.close();
 
-  // Pequeno atraso para garantir renderização antes da impressão.
+  // Abre automaticamente a opção de impressão/salvamento do navegador.
+  // No iPhone: Compartilhar/Imprimir > Salvar em Arquivos ou gerar PDF.
   setTimeout(() => {
     printWindow.focus();
     printWindow.print();
-  }, 400);
+  }, 700);
 }
 
 function buildAlbumPrintHtml() {
@@ -839,22 +840,20 @@ function buildDuplicatesPrintHtml(rows) {
       <tr>
         <td><strong>${escapeHtml(meta.name)} (${row.country})</strong></td>
         <td><strong>${row.code}</strong></td>
-        <td>${row.qty}</td>
         <td>${row.extra}</td>
       </tr>`;
   }).join("");
 
   return buildPrintDocument({
     title: "Copa 2026 - Figurinhas Repetidas",
-    summary: `Tipos repetidos: ${summary.duplicateTypes} | Repetidas extras: ${summary.duplicateExtras}`,
+    summary: `Tipos repetidos: ${summary.duplicateTypes} | Repetidas: ${summary.duplicateExtras}`,
     body: `
       <table class="duplicates-table">
         <thead>
           <tr>
             <th>País</th>
             <th>Figurinha</th>
-            <th>Quantidade</th>
-            <th>Repetidas extras</th>
+            <th>Repetidas</th>
           </tr>
         </thead>
         <tbody>${tableRows}</tbody>
