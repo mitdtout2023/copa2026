@@ -269,3 +269,16 @@ Na aba **Álbum**, use o campo **Buscar país** para localizar rapidamente pelo 
 - Removido o código **FWG**.
 - Mantido somente o código **FWC**.
 - Incluída migração automática: dados antigos salvos em **FWG** são transferidos para **FWC** ao carregar/importar backup.
+
+
+## Atualização
+- Incluídos os códigos/países:
+  - `SWE` — Suécia
+  - `PAR` — Paraguai
+  - `AUT` — Áustria
+  - `CZE` — República Tcheca
+  - `COD` — República Democrática do Congo
+  - `PANINI` — Panini
+- Cada novo código possui figurinhas de `01` até `20`.
+- Na tela **Repetidas**, o texto `sobra` foi alterado para `repetidas:`.
+- A tela **Repetidas** agora exibe o código e a quantidade de repetidas, sem mostrar a quantidade total.

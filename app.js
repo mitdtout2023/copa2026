@@ -1,12 +1,19 @@
 const COUNTRIES = [
-  "ALG", "ARG", "AUS", "BEL", "BIH", "BRA", "CAN", "CIV", "COL", "CRO",
-  "ECU", "ENG", "ESP", "FRA", "FWC", "GER", "GHA", "IRN", "JPN", "KOR",
-  "KSA", "MAR", "MEX", "NED", "NOR", "PAN", "POR", "QAT", "RSA", "SCO",
-  "SEN", "SUI", "TUN", "URU", "USA", "UZB"
+    "ALG", "ARG", "AUS", "AUT", "BEL", "BIH", "BRA", "CAN", "CIV", "COD",
+  "COL", "CRO", "CZE", "ECU", "ENG", "ESP", "FRA", "FWC", "GER", "GHA",
+  "IRN", "JPN", "KOR", "KSA", "MAR", "MEX", "NED", "NOR", "PAN", "PANINI",
+  "PAR", "POR", "QAT", "RSA", "SCO", "SEN", "SUI", "SWE", "TUN", "URU",
+  "USA", "UZB"
 ];
 
 const STICKERS_PER_COUNTRY = 20;
 const COUNTRY_META = {
+  SWE: { name: "Suécia", flag: "🇸🇪" },
+  PAR: { name: "Paraguai", flag: "🇵🇾" },
+  PANINI: { name: "Panini", flag: "🏷️" },
+  CZE: { name: "República Tcheca", flag: "🇨🇿" },
+  COD: { name: "República Democrática do Congo", flag: "🇨🇩" },
+  AUT: { name: "Áustria", flag: "🇦🇹" },
   ALG: { name: "Argélia", flag: "🇩🇿" },
   ARG: { name: "Argentina", flag: "🇦🇷" },
   AUS: { name: "Austrália", flag: "🇦🇺" },
@@ -557,8 +564,8 @@ function renderGroupedList(container, map, emptyText, duplicates = false) {
         const button = document.createElement("button");
         button.type = "button";
         button.className = "pill duplicate-pill";
-        button.textContent = `${country} ${item.number} • qtd. ${item.qty} • sobra ${item.extra}`;
-        button.setAttribute("aria-label", `Remover uma repetida de ${country} ${item.number}. Quantidade atual ${item.qty}.`);
+        button.textContent = `${country} ${String(item.number).padStart(2, "0")} • repetidas: ${item.extra}`;
+        button.setAttribute("aria-label", `Remover uma repetida de ${country} ${String(item.number).padStart(2, "0")}. Repetidas atuais ${item.extra}.`);
         button.addEventListener("click", () => removeDuplicateExtra(country, item.number));
         pillList.appendChild(button);
       }
@@ -586,7 +593,7 @@ function buildMissingText() {
 function buildDuplicatesText() {
   const map = getDuplicatesMap();
   const lines = Object.entries(map).map(([country, items]) => {
-    const values = items.map((item) => `${item.number} (qtd. ${item.qty}, sobra ${item.extra})`).join(", ");
+    const values = items.map((item) => `${String(item.number).padStart(2, "0")} (repetidas: ${item.extra})`).join(", ");
     return `${getCountryLabel(country)}: ${values}`;
   });
   return lines.length ? lines.join("\n") : "Nenhuma figurinha repetida.";
@@ -617,7 +624,7 @@ function parseStickerText(text) {
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
     .replace(countryNumberRegex, (_, country, rawNumber) => `${country} ${normalizeOcrNumberText(rawNumber)}`)
-    .replace(/([A-Z]{3})\s*[-_./]?\s*(0?[1-9]|1[0-9]|20)\b/g, "$1 $2")
+    .replace(new RegExp(`\\b(${countryPattern})\\s*[-_./]?\\s*(0?[1-9]|1[0-9]|20)\\b`, "g"), "$1 $2")
     .replace(/\bN[UÚ]?MERO\b|\bNUMERO\b|\bNRO\b|\bNº\b|\bNO\.?\b/g, " ")
     .replace(/[;|•·]/g, " ")
     .replace(/[,:]/g, " ");
@@ -1558,7 +1565,7 @@ function buildPdfReportLines() {
     lines.push("Nenhuma figurinha repetida.");
   } else {
     for (const [country, items] of Object.entries(duplicates)) {
-      const values = items.map((item) => `${item.number} qtd ${item.qty} sobra ${item.extra}`).join("; ");
+      const values = items.map((item) => `${item.number} qtd ${item.qty} repetidas ${item.extra}`).join("; ");
       lines.push(`${getCountryLabel(country)}: ${values}`);
     }
   }
