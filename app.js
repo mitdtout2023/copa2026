@@ -232,6 +232,51 @@ function renderRemoveModeUi() {
 
 
 
+
+function parseStickerCodesStrict(text) {
+  const countryPattern = COUNTRIES.join("|");
+  const normalized = String(text || "")
+    .toUpperCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, " ")
+    .replace(/[|;:•·]/g, " ")
+    .replace(/\s+/g, " ");
+
+  const directCodeRegex = new RegExp(`\\b(${countryPattern})\\s*[-_./]?\\s*([0-9OILS]{1,2})\\b`, "g");
+  const items = [];
+  let match;
+
+  while ((match = directCodeRegex.exec(normalized)) !== null) {
+    const country = match[1];
+    const rawNumber = normalizeOcrNumberText(match[2]);
+    const number = Number(rawNumber);
+
+    if (!COUNTRIES.includes(country)) continue;
+    if (number < 1 || number > STICKERS_PER_COUNTRY) continue;
+
+    items.push({ country, number });
+  }
+
+  // Remove duplicações exatas causadas por OCR repetindo o mesmo código na mesma foto.
+  // Se houver duas figurinhas iguais na mesma foto, o usuário pode confirmar manualmente depois.
+  const unique = [];
+  const seen = new Set();
+
+  for (const item of items) {
+    const key = `${item.country}-${item.number}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    unique.push(item);
+  }
+
+  return unique;
+}
+
+function formatStickerCode(item) {
+  return `${item.country} ${String(item.number).padStart(2, "0")}`;
+}
+
+
 function parseSingleStickerCode(rawCode) {
   const items = parseStickerText(rawCode);
   return items.length ? items[0] : null;
@@ -260,13 +305,33 @@ async function handleSingleStickerImage(event) {
     if (status) status.textContent = "Lendo imagem da figurinha...";
 
     const text = await recognizeStickerTextFromImage(file);
-    const items = parseStickerText(text);
+
+    // Para foto, usamos leitura estrita: somente códigos completos, como JPN 10.
+    // Isso evita que números soltos da imagem, como 2026, licença ou lote, sejam importados.
+    const items = parseStickerCodesStrict(text);
 
     if (!items.length) {
-      const manualCode = prompt(`Não consegui identificar automaticamente o código da figurinha. Texto lido: ${text || "(vazio)"}\n\nDigite o código manualmente, exemplo: JPN 15`);
+      const manualCode = prompt(`Não consegui identificar automaticamente o código da figurinha.\n\nDigite apenas o código da figurinha, exemplo: JPN 15`);
       if (manualCode === null) return;
 
-      const manualItems = parseStickerText(manualCode);
+      const manualItems = parseStickerCodesStrict(manualCode);
+      if (!manualItems.length) {
+        alert("Código inválido. Use o formato JPN 15, BRA 01, ARG 12 etc.");
+        return;
+      }
+
+      applyReadStickerItems(manualItems, "manual");
+      return;
+    }
+
+    const codes = items.map(formatStickerCode).join(", ");
+    const confirmed = confirm(`Códigos identificados na foto:\n\n${codes}\n\nDeseja atualizar o álbum com estes códigos?`);
+
+    if (!confirmed) {
+      const manualCode = prompt("Digite manualmente os códigos corretos. Exemplo: JPN 10, JPN 15");
+      if (manualCode === null) return;
+
+      const manualItems = parseStickerCodesStrict(manualCode);
       if (!manualItems.length) {
         alert("Código inválido. Use o formato JPN 15, BRA 01, ARG 12 etc.");
         return;
@@ -281,7 +346,7 @@ async function handleSingleStickerImage(event) {
     const manualCode = prompt(`Não foi possível ler a imagem automaticamente. Digite o código manualmente, exemplo: JPN 15.\n\nErro: ${error.message}`);
     if (manualCode === null) return;
 
-    const manualItems = parseStickerText(manualCode);
+    const manualItems = parseStickerCodesStrict(manualCode);
     if (!manualItems.length) {
       alert("Código inválido. Use o formato JPN 15, BRA 01, ARG 12 etc.");
       return;
@@ -321,7 +386,7 @@ function readStickerManualFallback() {
   const rawCode = prompt("Digite ou cole o código da figurinha. Exemplo: JPN 15");
   if (rawCode === null) return;
 
-  const items = parseStickerText(rawCode);
+  const items = parseStickerCodesStrict(rawCode);
 
   if (!items.length) {
     alert("Código inválido. Use o formato JPN 15, BRA 01, ARG 12 etc.");

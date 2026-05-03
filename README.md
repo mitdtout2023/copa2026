@@ -227,3 +227,10 @@ Na aba **Álbum**, use o campo **Buscar país** para localizar rapidamente pelo 
 - Se a figurinha ainda não existir, atualiza o álbum.
 - Se já existir, soma como repetida automaticamente.
 - Se a leitura automática falhar, o app pede o código manualmente.
+
+
+## Correção da leitura por foto
+- O botão **Ler figurinha** agora usa leitura estrita para fotos.
+- Apenas códigos completos como `JPN 10` e `JPN 15` são aceitos.
+- Números soltos da imagem, como `2026`, lote, licença ou textos da embalagem, são ignorados.
+- Antes de atualizar o álbum, o app mostra uma confirmação com os códigos encontrados.
