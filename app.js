@@ -861,17 +861,15 @@ function drawAlbumPdfTable(ctx, countries, metrics) {
   const startY = 112;
   const rowHeight = 34;
   const tableWidth = width - margin * 2;
-  const flagW = 72;
-  const countryW = 185;
-  const albumW = 160;
-  const stickersW = tableWidth - flagW - countryW - albumW;
+  const countryW = 245;
+  const albumW = 180;
+  const stickersW = tableWidth - countryW - albumW;
   const codeW = stickersW / STICKERS_PER_COUNTRY;
 
   drawHeaderRow(ctx, margin, startY, tableWidth, rowHeight, [
-    { text: "Bandeira", x: margin + 10 },
-    { text: "País", x: margin + flagW + 10 },
-    { text: "Álbum", x: margin + flagW + countryW + 10 },
-    { text: "Figurinhas 01 a 20", x: margin + flagW + countryW + albumW + 10 }
+    { text: "País", x: margin + 10 },
+    { text: "Álbum", x: margin + countryW + 10 },
+    { text: "Figurinhas 01 a 20", x: margin + countryW + albumW + 10 }
   ]);
 
   let y = startY + rowHeight;
@@ -885,24 +883,22 @@ function drawAlbumPdfTable(ctx, countries, metrics) {
     ctx.strokeStyle = "#cbd5e1";
     ctx.strokeRect(margin, y, tableWidth, rowHeight);
 
-    // Coluna Bandeira: ícone desenhado no canvas para aparecer corretamente no PDF.
-    drawFlagIcon(ctx, country, margin + 14, y + 7, 42, 22);
-
+    // Coluna País: somente nome do país e código.
     ctx.font = "700 13px Arial, sans-serif";
     ctx.fillStyle = "#0f172a";
-    ctx.fillText(meta.name, margin + flagW + 10, y + 15);
+    ctx.fillText(`${meta.name} (${country})`, margin + 10, y + 15);
 
     ctx.font = "10px Arial, sans-serif";
     ctx.fillStyle = "#64748b";
-    ctx.fillText(country, margin + flagW + 10, y + 28);
+    ctx.fillText(country, margin + 10, y + 28);
 
     ctx.font = "700 11px Arial, sans-serif";
     ctx.fillStyle = "#0f172a";
-    ctx.fillText(`${country} 01 até ${country} 20`, margin + flagW + countryW + 10, y + 21);
+    ctx.fillText(`${country} 01 até ${country} 20`, margin + countryW + 10, y + 21);
 
     for (let number = 1; number <= STICKERS_PER_COUNTRY; number++) {
       const qty = state.inventory[country][number] || 0;
-      const x = margin + flagW + countryW + albumW + (number - 1) * codeW;
+      const x = margin + countryW + albumW + (number - 1) * codeW;
       const code = `${country} ${String(number).padStart(2, "0")}`;
 
       ctx.fillStyle = qty === 0 ? "#fee2e2" : qty === 1 ? "#dcfce7" : "#fed7aa";
@@ -912,19 +908,18 @@ function drawAlbumPdfTable(ctx, countries, metrics) {
       ctx.strokeRect(x + 1.5, y + 4, codeW - 3, rowHeight - 8);
 
       ctx.textAlign = "center";
-      ctx.font = "6.5px Arial, sans-serif";
+      ctx.font = "6.8px Arial, sans-serif";
       ctx.fillStyle = "#0f172a";
       ctx.fillText(code, x + codeW / 2, y + 16);
 
-      ctx.font = "6px Arial, sans-serif";
+      ctx.font = "6.4px Arial, sans-serif";
       ctx.fillStyle = "#334155";
       ctx.fillText(`qtd ${qty}`, x + codeW / 2, y + 27);
       ctx.textAlign = "left";
     }
 
-    drawVerticalLine(ctx, margin + flagW, startY, y + rowHeight);
-    drawVerticalLine(ctx, margin + flagW + countryW, startY, y + rowHeight);
-    drawVerticalLine(ctx, margin + flagW + countryW + albumW, startY, y + rowHeight);
+    drawVerticalLine(ctx, margin + countryW, startY, y + rowHeight);
+    drawVerticalLine(ctx, margin + countryW + albumW, startY, y + rowHeight);
 
     y += rowHeight;
   });
@@ -936,18 +931,16 @@ function drawDuplicatesPdfTable(ctx, rows, metrics) {
   const rowHeight = 34;
   const tableWidth = width - margin * 2;
 
-  const flagW = 80;
-  const countryW = 245;
-  const codeW = 140;
-  const qtyW = 110;
-  const extraW = tableWidth - flagW - countryW - codeW - qtyW;
+  const countryW = 330;
+  const codeW = 170;
+  const qtyW = 120;
+  const extraW = tableWidth - countryW - codeW - qtyW;
 
   drawHeaderRow(ctx, margin, startY, tableWidth, rowHeight, [
-    { text: "Bandeira", x: margin + 10 },
-    { text: "País", x: margin + flagW + 10 },
-    { text: "Figurinha", x: margin + flagW + countryW + 10 },
-    { text: "Quantidade", x: margin + flagW + countryW + codeW + 10 },
-    { text: "Repetidas extras", x: margin + flagW + countryW + codeW + qtyW + 10 }
+    { text: "País", x: margin + 10 },
+    { text: "Figurinha", x: margin + countryW + 10 },
+    { text: "Quantidade", x: margin + countryW + codeW + 10 },
+    { text: "Repetidas extras", x: margin + countryW + codeW + qtyW + 10 }
   ]);
 
   let y = startY + rowHeight;
@@ -961,25 +954,23 @@ function drawDuplicatesPdfTable(ctx, rows, metrics) {
     ctx.strokeStyle = "#cbd5e1";
     ctx.strokeRect(margin, y, tableWidth, rowHeight);
 
-    drawFlagIcon(ctx, row.country, margin + 16, y + 7, 42, 22);
-
     ctx.font = "700 13px Arial, sans-serif";
-    ctx.fillText(`${meta.name} (${row.country})`, margin + flagW + 10, y + 21);
+    ctx.fillStyle = "#0f172a";
+    ctx.fillText(`${meta.name} (${row.country})`, margin + 10, y + 21);
 
     ctx.font = "700 14px Arial, sans-serif";
-    ctx.fillText(row.code, margin + flagW + countryW + 10, y + 21);
+    ctx.fillText(row.code, margin + countryW + 10, y + 21);
 
     ctx.font = "700 14px Arial, sans-serif";
-    ctx.fillText(String(row.qty), margin + flagW + countryW + codeW + 10, y + 21);
+    ctx.fillText(String(row.qty), margin + countryW + codeW + 10, y + 21);
 
     ctx.fillStyle = "#ea580c";
     ctx.font = "700 14px Arial, sans-serif";
-    ctx.fillText(String(row.extra), margin + flagW + countryW + codeW + qtyW + 10, y + 21);
+    ctx.fillText(String(row.extra), margin + countryW + codeW + qtyW + 10, y + 21);
 
-    drawVerticalLine(ctx, margin + flagW, startY, y + rowHeight);
-    drawVerticalLine(ctx, margin + flagW + countryW, startY, y + rowHeight);
-    drawVerticalLine(ctx, margin + flagW + countryW + codeW, startY, y + rowHeight);
-    drawVerticalLine(ctx, margin + flagW + countryW + codeW + qtyW, startY, y + rowHeight);
+    drawVerticalLine(ctx, margin + countryW, startY, y + rowHeight);
+    drawVerticalLine(ctx, margin + countryW + codeW, startY, y + rowHeight);
+    drawVerticalLine(ctx, margin + countryW + codeW + qtyW, startY, y + rowHeight);
 
     y += rowHeight;
   });

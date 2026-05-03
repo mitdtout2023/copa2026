@@ -185,3 +185,9 @@ Na aba **Álbum**, use o campo **Buscar país** para localizar rapidamente pelo 
 ## Correção das bandeiras no PDF
 - Substituída a renderização por emoji por bandeiras desenhadas diretamente no canvas.
 - A coluna **Bandeira** agora aparece no PDF do álbum e no PDF de repetidas, mesmo quando o navegador não renderiza emojis de bandeira no PDF.
+
+
+## Atualização dos backups em PDF
+- Removida a coluna **Bandeira** dos PDFs.
+- O PDF do álbum agora mostra apenas **País**, **Álbum** e **Figurinhas 01 a 20**.
+- O PDF de repetidas agora mostra apenas **País**, **Figurinha**, **Quantidade** e **Repetidas extras**.

@@ -1,4 +1,4 @@
-const CACHE_NAME = "figurinhas-copa-2026-v21-pdf-bandeiras-desenhadas";
+const CACHE_NAME = "figurinhas-copa-2026-v22-pdf-sem-bandeira";
 const APP_SHELL = [
   "./",
   "./index.html",
