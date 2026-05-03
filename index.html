@@ -109,24 +109,60 @@
 
       <div class="card-stack">
         <article class="form-card">
-          <h3>1. Texto das figurinhas</h3>
-          <label>
-            Importar arquivo de texto opcional
-            <input id="textFileInput" type="file" accept=".txt,text/plain" />
+          <h3>1. Digitar ou importar TXT</h3>
+          <div class="input-mode-box">
+            <h4>Opção A — Importar arquivo TXT</h4>
+            <label>
+              Selecionar arquivo TXT
+              <input id="textFileInput" type="file" accept=".txt,text/plain" />
+            </label>
+            <p class="help-text">Ao importar um TXT, o conteúdo será carregado no campo abaixo para conferência antes de atualizar o álbum.</p>
+          </div>
+          
+          <div class="input-mode-box">
+            <h4>Opção B — Digitar manualmente</h4>
+            <label>
+              Digitar ou colar códigos
+              <textarea id="manualText" rows="9" placeholder="Exemplos:
+JPN 10, JPN 15
+BRA 01
+PANINI 00
+ARG 04, 07, 20"></textarea>
           </label>
-          <p class="help-text">Você também pode colar o conteúdo manualmente abaixo. Não é necessário usar API Key nem enviar foto.</p>
-          <label>
-            Lista manual ou texto livre
-            <textarea id="manualText" rows="9" placeholder="Ex.: ARG 01, 04, 07, 08, 11, 17, 20&#10;BRA 18&#10;AUS 08, AUS 13, AUS 13"></textarea>
-          </label>
+          </div>
           <label class="inline-check">
             <input id="autoApply" type="checkbox" checked />
             Atualizar álbum automaticamente após a leitura
           </label>
           <div class="button-row import-actions">
-            <button id="parseManual" class="primary">Ler texto e atualizar</button>
+            <button id="parseManual" class="primary">Atualizar álbum</button>
+            <button id="generateImportLink" class="ghost">Gerar link</button>
             <button id="clearManualText" class="ghost">Limpar</button>
           </div>
+          <p id="importLinkHelp" class="help-text">Você pode digitar os códigos manualmente ou importar um TXT. Depois clique em “Atualizar álbum”, “Gerar link” ou “Enviar para iPhone”.</p>
+
+          <div class="sync-box">
+            <h4>Sincronização computador → iPhone</h4>
+            <label>
+              URL do Google Apps Script
+              <input id="syncEndpoint" type="url" placeholder="https://script.google.com/macros/s/.../exec" />
+            </label>
+            <label>
+              Código de sincronização
+              <input id="syncId" type="text" placeholder="Ex.: marcelo-copa-2026" />
+            </label>
+            <div class="button-row sync-actions">
+              <button id="saveSyncConfig" class="ghost" type="button">Salvar sync</button>
+              <button id="sendTextToSync" class="primary" type="button">Enviar para iPhone</button>
+              <button id="syncNow" class="ghost" type="button">Sincronizar agora</button>
+            </div>
+            <label class="inline-check">
+              <input id="autoSyncEnabled" type="checkbox" />
+              Sincronizar automaticamente quando o app estiver aberto
+            </label>
+            <p class="help-text">Use o mesmo URL e o mesmo código de sincronização no computador e no iPhone.</p>
+          </div>
+
         </article>
 
         <article class="form-card">

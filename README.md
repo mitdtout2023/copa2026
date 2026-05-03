@@ -289,3 +289,61 @@ Na aba **Álbum**, use o campo **Buscar país** para localizar rapidamente pelo 
 - **PANINI** agora possui figurinhas de `PANINI 00` até `PANINI 20`.
 - Todos os demais países/códigos continuam de `01` até `20`.
 - O relatório do álbum passa a exibir a coluna `00`; para países diferentes de PANINI, a coluna `00` aparece como indisponível.
+
+
+## Atualização: link de importação para iPhone
+- Adicionado botão **Gerar link para iPhone** na aba **Importar texto**.
+- No computador, cole ou importe o `.txt`, clique no botão e copie o link gerado.
+- Ao abrir o link no Safari do iPhone, o app identifica as figurinhas e pede confirmação para atualizar o álbum local do iPhone.
+- Após a importação, os parâmetros são removidos da URL para evitar reaplicação ao recarregar.
+
+
+## Sincronização automática computador → iPhone
+
+Esta versão inclui uma sincronização simples usando Google Apps Script.
+
+### No Google Apps Script
+1. Crie um projeto no Google Apps Script.
+2. Copie o conteúdo do arquivo `google-apps-script-sync.gs`.
+3. Cole no arquivo `Code.gs`.
+4. Publique como Web App.
+5. Copie a URL final terminada em `/exec`.
+
+### No iPhone
+1. Abra o app.
+2. Vá em **Importar texto**.
+3. Cole a URL do Google Apps Script.
+4. Use o mesmo **Código de sincronização** que será usado no computador.
+5. Marque **Sincronizar automaticamente quando o app estiver aberto**.
+6. Toque em **Salvar sync**.
+
+### No computador
+1. Abra o mesmo app no navegador.
+2. Vá em **Importar texto**.
+3. Cole ou importe o `.txt`.
+4. Informe a mesma URL e o mesmo Código de sincronização.
+5. Clique em **Enviar para iPhone**.
+
+O iPhone atualizará quando o app estiver aberto e a sincronização automática estiver ativada.
+
+
+## Atualização: digitar ou importar TXT
+- A aba **Importar texto** agora mostra claramente duas opções:
+  - **Opção A — Importar arquivo TXT**
+  - **Opção B — Digitar manualmente**
+- Ambas usam o mesmo fluxo de atualização do álbum.
+- O conteúdo importado pelo TXT é carregado no campo de texto para conferência.
+
+
+## Atualização: formatos manuais aceitos
+- A digitação manual agora aceita:
+  - `BRA 12`
+  - `bra12`
+  - `Bra 12`
+  - `Bra12`
+- Também aceita códigos maiores, como:
+  - `PANINI 00`
+  - `panini00`
+- A leitura continua aceitando listas, como:
+  - `JPN 10, JPN 15`
+  - `ARG 04, 07, 20`

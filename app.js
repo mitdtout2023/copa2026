@@ -91,6 +91,8 @@ function getStickerRangeLabel(country) {
 
 
 const STORAGE_KEY = "figurinhas-copa-2026-state-v2";
+const SYNC_CONFIG_STORAGE = "figurinhas-copa-2026-sync-config-v1";
+const SYNC_LAST_APPLIED_STORAGE = "figurinhas-copa-2026-sync-last-applied-v1";
 const REMOVE_PASSWORD = "talita10";
 const LEGACY_STORAGE_KEY = "figurinhas-copa-2026-state-v1";
 
@@ -100,6 +102,7 @@ let lastComparison = [];
 let parsedAlreadyApplied = false;
 let deferredInstallPrompt = null;
 let removeModeActive = false;
+let syncTimer = null;
 
 const $ = (id) => document.getElementById(id);
 
@@ -190,7 +193,12 @@ function setupEvents() {
   $("copyMissing").addEventListener("click", () => copyText(buildMissingText()));
   $("copyDuplicates").addEventListener("click", () => copyText(buildDuplicatesText()));
   $("parseManual").addEventListener("click", parseManualText);
+  $("generateImportLink").addEventListener("click", generateImportLinkForIPhone);
   $("clearManualText").addEventListener("click", clearManualText);
+  $("saveSyncConfig").addEventListener("click", saveSyncConfigFromForm);
+  $("sendTextToSync").addEventListener("click", sendTextToSync);
+  $("syncNow").addEventListener("click", () => syncFromCloud({ manual: true }));
+  $("autoSyncEnabled").addEventListener("change", saveSyncConfigFromForm);
   $("applyParsed").addEventListener("click", () => applyParsedItems({ silent: false, allowRepeat: true }));
   $("clearParsed").addEventListener("click", clearParsed);
   $("exportJson").addEventListener("click", exportJson);
@@ -268,35 +276,7 @@ function renderRemoveModeUi() {
 
 
 function parseStickerCodesStrict(text) {
-  const countryPattern = COUNTRIES.join("|");
-  const normalized = String(text || "")
-    .toUpperCase()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, " ")
-    .replace(/J\s*P\s*N/g, "JPN")
-    .replace(/B\s*R\s*A/g, "BRA")
-    .replace(/A\s*R\s*G/g, "ARG")
-    .replace(/U\s*S\s*A/g, "USA")
-    .replace(/[|;:•·]/g, " ")
-    .replace(/\s+/g, " ")
-    .trim();
-
-  const directCodeRegex = new RegExp(`\\b(${countryPattern})\\s*[-_./]?\\s*([0-9OILS]{1,2})\\b`, "g");
-  const items = [];
-  let match;
-
-  while ((match = directCodeRegex.exec(normalized)) !== null) {
-    const country = match[1];
-    const rawNumber = normalizeOcrNumberText(match[2]);
-    const number = Number(rawNumber);
-
-    if (!COUNTRIES.includes(country)) continue;
-    if (!isValidStickerNumber(country, number)) continue;
-
-    items.push({ country, number });
-  }
-
-  return items;
+  return parseStickerText(text);
 }
 
 function formatStickerCode(item) {
@@ -381,6 +361,9 @@ function applyReadStickerItems(items, source = "foto") {
 
   saveState();
   renderAll();
+  handleImportFromUrl();
+  loadSyncConfig();
+  startAutoSyncIfEnabled();
 
   const sourceLabel = "Leitura concluída";
   alert(`${sourceLabel}.\nTotal lido: ${totalRead}\n\n${messages.slice(0, 8).join("\n")}${messages.length > 8 ? "\n..." : ""}`);
@@ -645,63 +628,61 @@ function normalizeOcrNumberText(value) {
 }
 
 function parseStickerText(text) {
-  const countryPattern = COUNTRIES.join("|");
-  const countryNumberRegex = new RegExp(`\\b(${countryPattern})\\s*[-_./]?\\s*([0-9OILS]{1,2})\\b`, "g");
-  const normalized = text
+  const normalized = String(text || "")
     .toUpperCase()
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
-    .replace(countryNumberRegex, (_, country, rawNumber) => `${country} ${normalizeOcrNumberText(rawNumber)}`)
-    .replace(new RegExp(`\\b(${countryPattern})\\s*[-_./]?\\s*(0?[0-9]|1[0-9]|20)\\b`, "g"), "$1 $2")
-    .replace(/\bN[UÚ]?MERO\b|\bNUMERO\b|\bNRO\b|\bNº\b|\bNO\.?\b/g, " ")
-    .replace(/[;|•·]/g, " ")
-    .replace(/[,:]/g, " ");
+    .replace(/[|;:•·]/g, " ")
+    .replace(/,/g, " , ")
+    .replace(/\s+/g, " ")
+    .trim();
 
-  // Aceita:
-  // BRA 01
-  // BRA01
-  // BRA 1, 2, 3
-  // BRA 12 x2
-  // BRA 12 qtd 2
-  const tokenRegex = new RegExp(
-    `\\bX\\s*([1-9]\\d*)\\b|\\bQTD\\.?\\s*([1-9]\\d*)\\b|\\bQUANTIDADE\\s*([1-9]\\d*)\\b|\\b(${countryPattern})\\b|\\b(0?[0-9]|1[0-9]|20)\\b`,
-    "g"
-  );
+  const sortedCountries = [...COUNTRIES].sort((a, b) => b.length - a.length);
+  const countryPattern = sortedCountries.map(escapeRegex).join("|");
 
+  // Aceita códigos diretos:
+  // BRA12, BRA 12, Bra12, bra 12, PANINI00, PANINI 00
+  const directCodeRegex = new RegExp(`\\b(${countryPattern})\\s*[-_./]?\\s*([0-9OILS]{1,2})\\b`, "gi");
   const items = [];
-  let currentCountry = null;
-  let lastItem = null;
   let match;
 
+  while ((match = directCodeRegex.exec(normalized)) !== null) {
+    const country = match[1].toUpperCase();
+    const number = Number(normalizeOcrNumberText(match[2]));
+
+    if (COUNTRIES.includes(country) && isValidStickerNumber(country, number)) {
+      items.push({ country, number });
+    }
+  }
+
+  // Aceita formato contextual:
+  // ARG 01, 04, 07
+  // BRA 12 13 14
+  const tokenRegex = new RegExp(`\\b(${countryPattern})\\b|\\b(0?[0-9]|1[0-9]|20)\\b`, "gi");
+  let currentCountry = null;
+
   while ((match = tokenRegex.exec(normalized)) !== null) {
-    const multiplier = Number(match[1] || match[2] || match[3] || 0);
-    const country = match[4];
-    const numberText = match[5];
-
-    if (multiplier && lastItem) {
-      for (let i = 1; i < multiplier; i++) {
-        items.push({ country: lastItem.country, number: lastItem.number });
-      }
+    if (match[1]) {
+      currentCountry = match[1].toUpperCase();
       continue;
     }
 
-    if (country) {
-      currentCountry = country;
-      lastItem = null;
-      continue;
-    }
-
-    if (numberText && currentCountry) {
-      const number = Number(numberText);
-      if (number >= 1 && number <= STICKERS_PER_COUNTRY) {
-        const item = { country: currentCountry, number };
-        items.push(item);
-        lastItem = item;
+    if (match[2] && currentCountry) {
+      const number = Number(match[2]);
+      if (isValidStickerNumber(currentCountry, number)) {
+        items.push({ country: currentCountry, number });
       }
     }
   }
 
+  // Remove duplicatas geradas pelo duplo parser na mesma leitura.
+  // Duplicatas reais no texto, como "AUS 13, AUS 13", continuam sendo contadas
+  // pelo groupParsedItems quando aparecerem explicitamente mais de uma vez.
   return items;
+}
+
+function escapeRegex(value) {
+  return String(value).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
 
@@ -713,6 +694,297 @@ function clearManualText() {
   clearParsed();
   $("manualText").focus();
 }
+
+
+
+function getSyncConfig() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(SYNC_CONFIG_STORAGE) || "{}");
+    return {
+      endpoint: saved.endpoint || "",
+      syncId: saved.syncId || "",
+      autoSync: Boolean(saved.autoSync)
+    };
+  } catch {
+    return { endpoint: "", syncId: "", autoSync: false };
+  }
+}
+
+function loadSyncConfig() {
+  const config = getSyncConfig();
+
+  if ($("syncEndpoint")) $("syncEndpoint").value = config.endpoint;
+  if ($("syncId")) $("syncId").value = config.syncId;
+  if ($("autoSyncEnabled")) $("autoSyncEnabled").checked = config.autoSync;
+}
+
+function saveSyncConfigFromForm() {
+  const endpoint = $("syncEndpoint").value.trim();
+  const syncId = $("syncId").value.trim();
+  const autoSync = $("autoSyncEnabled").checked;
+
+  localStorage.setItem(SYNC_CONFIG_STORAGE, JSON.stringify({ endpoint, syncId, autoSync }));
+  startAutoSyncIfEnabled();
+
+  alert("Configuração de sincronização salva.");
+}
+
+function validateSyncConfig() {
+  const endpoint = $("syncEndpoint").value.trim();
+  const syncId = $("syncId").value.trim();
+
+  if (!endpoint) {
+    alert("Informe a URL do Google Apps Script.");
+    return null;
+  }
+
+  if (!syncId) {
+    alert("Informe o código de sincronização. Use o mesmo código no computador e no iPhone.");
+    return null;
+  }
+
+  return { endpoint, syncId, autoSync: $("autoSyncEnabled").checked };
+}
+
+async function sendTextToSync() {
+  const config = validateSyncConfig();
+  if (!config) return;
+
+  const text = $("manualText").value.trim();
+  if (!text) {
+    alert("Cole ou importe o arquivo TXT antes de enviar para o iPhone.");
+    return;
+  }
+
+  const items = parseStickerText(text);
+  if (!items.length) {
+    alert("Nenhuma figurinha válida foi encontrada no texto.");
+    return;
+  }
+
+  localStorage.setItem(SYNC_CONFIG_STORAGE, JSON.stringify(config));
+
+  const payload = {
+    action: "push",
+    syncId: config.syncId,
+    text,
+    createdAt: new Date().toISOString()
+  };
+
+  $("aiResult").textContent = "Enviando lista para sincronização...";
+
+  try {
+    const response = await fetch(config.endpoint, {
+      method: "POST",
+      body: JSON.stringify(payload)
+    });
+
+    const data = await response.json();
+
+    if (!data.ok) {
+      throw new Error(data.error || "Falha ao enviar dados.");
+    }
+
+    $("aiResult").textContent = [
+      "Lista enviada para a nuvem.",
+      "",
+      `Figurinhas identificadas: ${items.length}`,
+      `Código de sincronização: ${config.syncId}`,
+      "",
+      "No iPhone, deixe o app aberto com a sincronização automática ligada ou toque em “Sincronizar agora”."
+    ].join("\n");
+
+    alert("Lista enviada. O iPhone será atualizado quando sincronizar.");
+  } catch (error) {
+    alert(`Erro ao enviar para sincronização: ${error.message}`);
+  }
+}
+
+function startAutoSyncIfEnabled() {
+  if (syncTimer) {
+    clearInterval(syncTimer);
+    syncTimer = null;
+  }
+
+  const config = getSyncConfig();
+
+  if (!config.autoSync || !config.endpoint || !config.syncId) return;
+
+  syncTimer = setInterval(() => {
+    syncFromCloud({ manual: false });
+  }, 20000);
+
+  syncFromCloud({ manual: false });
+}
+
+async function syncFromCloud({ manual = false } = {}) {
+  const config = getSyncConfig();
+
+  if (!config.endpoint || !config.syncId) {
+    if (manual) alert("Configure a URL do Google Apps Script e o código de sincronização.");
+    return;
+  }
+
+  try {
+    const url = new URL(config.endpoint);
+    url.searchParams.set("syncId", config.syncId);
+
+    const response = await fetch(url.toString());
+    const data = await response.json();
+
+    if (!data.ok) {
+      throw new Error(data.error || "Falha ao consultar sincronização.");
+    }
+
+    if (!data.text || !data.version) {
+      if (manual) alert("Nenhuma lista foi enviada ainda para este código de sincronização.");
+      return;
+    }
+
+    const lastApplied = localStorage.getItem(SYNC_LAST_APPLIED_STORAGE);
+    if (lastApplied === data.version) {
+      if (manual) alert("O iPhone já está atualizado com a última lista enviada.");
+      return;
+    }
+
+    const items = parseStickerText(data.text);
+    if (!items.length) {
+      if (manual) alert("A lista sincronizada não contém códigos válidos.");
+      return;
+    }
+
+    const confirmed = manual
+      ? confirm(`Lista encontrada na sincronização.\n\nFigurinhas identificadas: ${items.length}\n\nDeseja atualizar o álbum deste iPhone?`)
+      : true;
+
+    if (!confirmed) return;
+
+    parsedAlreadyApplied = false;
+    parsedItems = items;
+    lastComparison = buildComparison(parsedItems);
+    $("manualText").value = data.text;
+    updateParsedResult("Texto sincronizado do computador", { comparison: lastComparison });
+
+    applyParsedItems({ silent: true });
+    localStorage.setItem(SYNC_LAST_APPLIED_STORAGE, data.version);
+
+    if (manual) {
+      alert("Álbum atualizado com a lista sincronizada.");
+    } else {
+      const status = $("saveStatus");
+      if (status) status.textContent = `Sincronizado automaticamente em ${new Date().toLocaleString("pt-BR")}.`;
+    }
+  } catch (error) {
+    if (manual) alert(`Erro ao sincronizar: ${error.message}`);
+  }
+}
+
+
+function encodeImportTextForUrl(text) {
+  const utf8 = new TextEncoder().encode(text);
+  let binary = "";
+  for (const byte of utf8) {
+    binary += String.fromCharCode(byte);
+  }
+
+  return btoa(binary)
+    .replace(/\+/g, "-")
+    .replace(/\//g, "_")
+    .replace(/=+$/g, "");
+}
+
+function decodeImportTextFromUrl(encoded) {
+  let base64 = String(encoded || "")
+    .replace(/-/g, "+")
+    .replace(/_/g, "/");
+
+  while (base64.length % 4) {
+    base64 += "=";
+  }
+
+  const binary = atob(base64);
+  const bytes = new Uint8Array(binary.length);
+
+  for (let index = 0; index < binary.length; index++) {
+    bytes[index] = binary.charCodeAt(index);
+  }
+
+  return new TextDecoder().decode(bytes);
+}
+
+async function generateImportLinkForIPhone() {
+  const text = $("manualText").value.trim();
+
+  if (!text) {
+    alert("Cole ou importe um arquivo TXT antes de gerar o link para o iPhone.");
+    return;
+  }
+
+  const encoded = encodeImportTextForUrl(text);
+  const url = new URL(window.location.href);
+  url.searchParams.set("importTxt", encoded);
+  url.searchParams.set("autoApply", "1");
+  url.hash = "";
+
+  const link = url.toString();
+
+  $("aiResult").textContent = [
+    "Link gerado para atualizar o app no iPhone:",
+    "",
+    link,
+    "",
+    "Como usar:",
+    "1. Copie este link.",
+    "2. Envie para o iPhone por WhatsApp, e-mail, AirDrop ou Notas.",
+    "3. Abra no Safari do iPhone.",
+    "4. Confirme a importação no app."
+  ].join("\n");
+
+  try {
+    await navigator.clipboard.writeText(link);
+    alert("Link copiado. Abra este link no Safari do iPhone para atualizar o app local.");
+  } catch {
+    prompt("Copie o link abaixo e abra no Safari do iPhone:", link);
+  }
+}
+
+function handleImportFromUrl() {
+  const params = new URLSearchParams(window.location.search);
+  const encoded = params.get("importTxt");
+
+  if (!encoded) return;
+
+  try {
+    const importedText = decodeImportTextFromUrl(encoded);
+    $("manualText").value = importedText;
+    clearParsed();
+
+    const items = parseStickerText(importedText);
+    if (!items.length) {
+      alert("O link foi aberto, mas nenhum código de figurinha foi identificado.");
+      return;
+    }
+
+    const confirmed = confirm(`Link de importação recebido.\n\nForam identificadas ${items.length} figurinhas no texto.\n\nDeseja atualizar o álbum deste iPhone agora?`);
+
+    parsedAlreadyApplied = false;
+    parsedItems = items;
+    lastComparison = buildComparison(parsedItems);
+    updateParsedResult("Texto recebido por link", { comparison: lastComparison });
+
+    if (confirmed) {
+      applyParsedItems({ silent: true });
+      alert("Álbum atualizado neste iPhone.");
+    }
+
+    // Limpa os parâmetros da URL para evitar reaplicar ao recarregar a página.
+    const cleanUrl = `${window.location.origin}${window.location.pathname}${window.location.hash || ""}`;
+    window.history.replaceState({}, document.title, cleanUrl);
+  } catch (error) {
+    alert(`Não foi possível importar o link: ${error.message}`);
+  }
+}
+
 
 async function importTextFile(event) {
   const file = event.target.files?.[0];

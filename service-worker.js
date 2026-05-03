@@ -1,10 +1,11 @@
-const CACHE_NAME = "figurinhas-copa-2026-v36-panini-00-20";
+const CACHE_NAME = "figurinhas-copa-2026-v39-formatos-manuais";
 const APP_SHELL = [
   "./",
   "./index.html",
   "./styles.css",
   "./app.js",
   "./manifest.webmanifest",
+  "./google-apps-script-sync.gs",
   "./favicon.png",
   "./apple-touch-icon.png",
   "./apple-touch-icon-167x167.png",
