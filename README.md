@@ -347,3 +347,14 @@ O iPhone atualizará quando o app estiver aberto e a sincronização automática
 - A leitura continua aceitando listas, como:
   - `JPN 10, JPN 15`
   - `ARG 04, 07, 20`
+
+
+## Atualização de países qualificados
+Comparação realizada com a lista informada pelo usuário.
+
+Países/códigos que ainda não estavam no app e foram incluídos:
+TUR, CUW, HAI, IRQ, JOR, CPV, EGY, NZL
+
+Novos códigos seguem a regra geral de `01` até `20`, exceto **PANINI**, que permanece de `00` até `20`.
+
+A lista do app agora contempla os países informados da CONMEBOL, UEFA, CONCACAF, AFC, CAF e OFC, mantendo também os códigos especiais já existentes, como **FWC** e **PANINI**.

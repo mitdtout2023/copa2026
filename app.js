@@ -1,18 +1,26 @@
 const COUNTRIES = [
-    "ALG", "ARG", "AUS", "AUT", "BEL", "BIH", "BRA", "CAN", "CIV", "COD",
-  "COL", "CRO", "CZE", "ECU", "ENG", "ESP", "FRA", "FWC", "GER", "GHA",
-  "IRN", "JPN", "KOR", "KSA", "MAR", "MEX", "NED", "NOR", "PAN", "PANINI",
-  "PAR", "POR", "QAT", "RSA", "SCO", "SEN", "SUI", "SWE", "TUN", "URU",
-  "USA", "UZB"
+      "ALG", "ARG", "AUS", "AUT", "BEL", "BIH", "BRA", "CAN", "CIV", "COD",
+  "COL", "CPV", "CRO", "CUW", "CZE", "ECU", "EGY", "ENG", "ESP", "FRA",
+  "FWC", "GER", "GHA", "HAI", "IRN", "IRQ", "JOR", "JPN", "KOR", "KSA",
+  "MAR", "MEX", "NED", "NOR", "NZL", "PAN", "PANINI", "PAR", "POR", "QAT",
+  "RSA", "SCO", "SEN", "SUI", "SWE", "TUN", "TUR", "URU", "USA", "UZB"
 ];
 
 const STICKERS_PER_COUNTRY = 20;
 const COUNTRY_META = {
+  NZL: { name: "Nova Zelândia", flag: "🇳🇿" },
+  EGY: { name: "Egito", flag: "🇪🇬" },
+  CPV: { name: "Cabo Verde", flag: "🇨🇻" },
+  JOR: { name: "Jordânia", flag: "🇯🇴" },
+  IRQ: { name: "Iraque", flag: "🇮🇶" },
+  HAI: { name: "Haiti", flag: "🇭🇹" },
+  CUW: { name: "Curaçau", flag: "🇨🇼" },
+  TUR: { name: "Turquia", flag: "🇹🇷" },
   SWE: { name: "Suécia", flag: "🇸🇪" },
   PAR: { name: "Paraguai", flag: "🇵🇾" },
   PANINI: { name: "Panini", flag: "🏷️" },
   CZE: { name: "República Tcheca", flag: "🇨🇿" },
-  COD: { name: "República Democrática do Congo", flag: "🇨🇩" },
+  COD: { name: "RD do Congo", flag: "🇨🇩" },
   AUT: { name: "Áustria", flag: "🇦🇹" },
   ALG: { name: "Argélia", flag: "🇩🇿" },
   ARG: { name: "Argentina", flag: "🇦🇷" },
@@ -49,7 +57,7 @@ const COUNTRY_META = {
   TUN: { name: "Tunísia", flag: "🇹🇳" },
   URU: { name: "Uruguai", flag: "🇺🇾" },
   USA: { name: "Estados Unidos", flag: "🇺🇸" },
-  UZB: { name: "Uzbequistão", flag: "🇺🇿" }
+  UZB: { name: "Uzbequistão", flag: "🇺🇿" },
 };
 
 function getCountryMeta(country) {
