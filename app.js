@@ -1343,17 +1343,70 @@ function exportDuplicatesPdfReport() {
 }
 
 function downloadReportFile(reportHtml, filename) {
-  const blob = new Blob([reportHtml], { type: "text/html;charset=utf-8" });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
+  const finalHtml = injectReportOpenActions(reportHtml, filename);
 
-  a.href = url;
-  a.download = filename;
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
+  // 1) Abre o relatório em nova aba/janela. Isso torna o botão claramente funcional.
+  const reportWindow = window.open("", "_blank");
+  if (reportWindow) {
+    reportWindow.document.open();
+    reportWindow.document.write(finalHtml);
+    reportWindow.document.close();
+  }
 
-  setTimeout(() => URL.revokeObjectURL(url), 1000);
+  // 2) Também tenta baixar automaticamente o HTML do relatório.
+  // Em alguns navegadores/PWA, o download pode ser bloqueado; nesse caso, a nova aba continua disponível.
+  try {
+    const blob = new Blob([finalHtml], { type: "text/html;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+
+    setTimeout(() => URL.revokeObjectURL(url), 2000);
+  } catch (error) {
+    if (!reportWindow) {
+      alert(`Não foi possível gerar o relatório: ${error.message}`);
+    }
+  }
+
+  if (!reportWindow) {
+    alert("O relatório foi gerado. Se ele não abrir, permita pop-ups para este site.");
+  }
+}
+
+function injectReportOpenActions(reportHtml, filename) {
+  const actions = `
+    <script>
+      function baixarRelatorioGerado() {
+        const html = document.documentElement.outerHTML;
+        const blob = new Blob([html], { type: "text/html;charset=utf-8" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = ${JSON.stringify(filename)};
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        setTimeout(function () { URL.revokeObjectURL(url); }, 2000);
+      }
+    <\/script>
+  `;
+
+  const helpReplacement = `
+    <div class="screen-help">
+      Relatório gerado.
+      <button type="button" onclick="baixarRelatorioGerado()">Baixar arquivo</button>
+      <button type="button" onclick="window.print()">Salvar como PDF</button>
+    </div>
+  `;
+
+  return reportHtml
+    .replace("</head>", `${actions}</head>`)
+    .replace(/<div class="screen-help">.*?<\/div>/s, helpReplacement);
 }
 
 function buildAlbumReportHtml() {

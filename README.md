@@ -393,3 +393,10 @@ Obrigatório:
   - aceita repetições reais, como `AUS 13, AUS 13`.
 - A importação TXT substitui o conteúdo anterior e limpa o resultado antigo antes de analisar.
 - O rótulo **Tipos repetidos** foi alterado para **Repetidas**.
+
+
+## Correção do botão Relatório álbum
+- O botão **Relatório álbum** agora abre o relatório em uma nova aba.
+- Também tenta baixar automaticamente o arquivo `.html`.
+- A nova aba inclui botões **Baixar arquivo** e **Salvar como PDF**.
+- Isso evita falhas em navegadores/PWA que bloqueiam download automático por Blob.
