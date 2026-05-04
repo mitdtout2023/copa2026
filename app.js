@@ -289,44 +289,6 @@ function parseStickerCodesStrict(text) {
   return parseStickerText(text);
 }
 
-function formatStickerCode(item) {
-  return formatStickerCode(item.country, item.number);
-}
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 function applyReadStickerItems(items, source = "foto") {
   const grouped = groupParsedItems(items);
   const messages = [];
@@ -1326,129 +1288,43 @@ function exportDuplicatesPdfReport() {
 }
 
 function downloadReportFile(reportHtml, filename) {
-  const finalHtml = injectReportOpenActions(reportHtml, filename);
-  const reportWindow = window.open("", "_blank");
+  const finalHtml = sanitizeReportForDownload(reportHtml);
 
-  if (!reportWindow) {
-    // Fallback: mostra o relatório na mesma aba caso pop-up seja bloqueado.
-    document.open();
-    document.write(finalHtml);
-    document.close();
-    return;
+  try {
+    const blob = new Blob([finalHtml], { type: "text/html;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+
+    a.href = url;
+    a.download = filename;
+    a.style.display = "none";
+    document.body.appendChild(a);
+    a.click();
+
+    setTimeout(() => {
+      a.remove();
+      URL.revokeObjectURL(url);
+    }, 500);
+  } catch (error) {
+    alert(`Não foi possível salvar o relatório HTML: ${error.message}`);
   }
-
-  reportWindow.document.open();
-  reportWindow.document.write(finalHtml);
-  reportWindow.document.close();
 }
 
-function injectReportOpenActions(reportHtml, filename) {
-  const safeFilename = JSON.stringify(filename);
+function sanitizeReportForDownload(reportHtml) {
+  // Remove controles anteriores do relatório para salvar apenas o conteúdo limpo.
+  let output = String(reportHtml || "");
 
-  const actions = `
-    <script>
-      const REPORT_FILENAME = ${safeFilename};
+  output = output.replace(/<div class="screen-help">.*?<\/div>/gs, "");
+  output = output.replace(/<div class="report-actions">.*?<\/div>/gs, "");
 
-      function salvarComoHtml() {
-        const html = "<!doctype html>\\n" + document.documentElement.outerHTML;
-        const blob = new Blob([html], { type: "text/html;charset=utf-8" });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement("a");
-
-        a.href = url;
-        a.download = REPORT_FILENAME;
-        a.style.display = "none";
-        document.body.appendChild(a);
-        a.click();
-
-        setTimeout(function () {
-          a.remove();
-          URL.revokeObjectURL(url);
-        }, 500);
-      }
-    <\/script>
-  `;
-
-  const actionStyles = `
-    <style>
-      .report-actions {
-        display: flex;
-        gap: 8px;
-        flex-wrap: wrap;
-        margin: 0 auto 12px;
-        max-width: 210mm;
-      }
-
-      .report-actions button {
-        border: 0;
-        border-radius: 10px;
-        padding: 9px 12px;
-        font-weight: 700;
-        cursor: pointer;
-        background: #0f172a;
-        color: #ffffff;
-        font-family: Arial, Helvetica, sans-serif;
-      }
-
-      @media print {
-        .report-actions,
-        .screen-help {
-          display: none !important;
-        }
-      }
-    </style>
-  `;
-
-  const helpReplacement = `
-    <div class="screen-help">
-      Relatório gerado. Use o botão abaixo para salvar.
-    </div>
-    <div class="report-actions">
-      <button type="button" onclick="salvarComoHtml()">Salvar como HTML</button>
-    </div>
-  `;
-
-  let output = reportHtml
-    .replace("</head>", `${actions}${actionStyles}</head>`)
-    .replace(/<div class="screen-help">.*?<\/div>/s, helpReplacement);
-
-  if (!output.includes("report-actions")) {
-    output = output.replace("<body>", `<body>${helpReplacement}`);
+  // Garante que o arquivo tenha doctype.
+  if (!output.trim().toLowerCase().startsWith("<!doctype")) {
+    output = "<!doctype html>\n" + output;
   }
 
   return output;
 }
 
-function injectReportOpenActions(reportHtml, filename) {
-  const actions = `
-    <script>
-      function baixarRelatorioGerado() {
-        const html = document.documentElement.outerHTML;
-        const blob = new Blob([html], { type: "text/html;charset=utf-8" });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement("a");
-        a.href = url;
-        a.download = ${JSON.stringify(filename)};
-        document.body.appendChild(a);
-        a.click();
-        a.remove();
-        setTimeout(function () { URL.revokeObjectURL(url); }, 2000);
-      }
-    <\/script>
-  `;
-
-  const helpReplacement = `
-    <div class="screen-help">
-      Relatório gerado.
-      <button type="button" onclick="baixarRelatorioGerado()">Baixar arquivo</button>
-      <button type="button" onclick="window.print()"></button>
-    </div>
-  `;
-
-  return reportHtml
-    .replace("</head>", `${actions}</head>`)
-    .replace(/<div class="screen-help">.*?<\/div>/s, helpReplacement);
-}
 
 function buildAlbumReportHtml() {
   const summary = getSummary();

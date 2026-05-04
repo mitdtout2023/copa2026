@@ -415,3 +415,9 @@ Obrigatório:
 ## Ajuste dos relatórios
 - Os relatórios agora mostram apenas a opção **Salvar como HTML**.
 - Removidas as opções **Salvar como PDF** e **Fechar**.
+
+
+## Correção final dos relatórios
+- Corrigida a função duplicada `formatStickerCode`, que quebrava a geração dos relatórios.
+- Os botões **Relatório álbum** e **Relatório repetidas** agora salvam diretamente o arquivo `.html`.
+- Removida a abertura em nova aba e removidos botões internos do relatório.
