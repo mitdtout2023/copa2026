@@ -1349,7 +1349,7 @@ function injectReportOpenActions(reportHtml, filename) {
     <script>
       const REPORT_FILENAME = ${safeFilename};
 
-      function baixarRelatorioGerado() {
+      function salvarComoHtml() {
         const html = "<!doctype html>\\n" + document.documentElement.outerHTML;
         const blob = new Blob([html], { type: "text/html;charset=utf-8" });
         const url = URL.createObjectURL(blob);
@@ -1365,10 +1365,6 @@ function injectReportOpenActions(reportHtml, filename) {
           a.remove();
           URL.revokeObjectURL(url);
         }, 500);
-      }
-
-      function salvarComoPdf() {
-        window.print();
       }
     <\/script>
   `;
@@ -1394,11 +1390,6 @@ function injectReportOpenActions(reportHtml, filename) {
         font-family: Arial, Helvetica, sans-serif;
       }
 
-      .report-actions .secondary {
-        background: #e2e8f0;
-        color: #0f172a;
-      }
-
       @media print {
         .report-actions,
         .screen-help {
@@ -1410,12 +1401,10 @@ function injectReportOpenActions(reportHtml, filename) {
 
   const helpReplacement = `
     <div class="screen-help">
-      Relatório gerado. Use os botões abaixo para salvar.
+      Relatório gerado. Use o botão abaixo para salvar.
     </div>
     <div class="report-actions">
-      <button type="button" onclick="baixarRelatorioGerado()">Baixar HTML</button>
-      <button type="button" onclick="salvarComoPdf()">Salvar como PDF</button>
-      <button type="button" class="secondary" onclick="window.close()">Fechar</button>
+      <button type="button" onclick="salvarComoHtml()">Salvar como HTML</button>
     </div>
   `;
 
@@ -1452,7 +1441,7 @@ function injectReportOpenActions(reportHtml, filename) {
     <div class="screen-help">
       Relatório gerado.
       <button type="button" onclick="baixarRelatorioGerado()">Baixar arquivo</button>
-      <button type="button" onclick="window.print()">Salvar como PDF</button>
+      <button type="button" onclick="window.print()"></button>
     </div>
   `;
 

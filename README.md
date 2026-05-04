@@ -410,3 +410,8 @@ Obrigatório:
   - **Baixar HTML**
   - **Salvar como PDF**
 - Isso evita falhas de download automático em navegadores/PWA.
+
+
+## Ajuste dos relatórios
+- Os relatórios agora mostram apenas a opção **Salvar como HTML**.
+- Removidas as opções **Salvar como PDF** e **Fechar**.
