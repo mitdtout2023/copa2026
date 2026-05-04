@@ -647,48 +647,47 @@ function parseStickerText(text) {
     .replace(/\s+/g, " ")
     .trim();
 
+  if (!normalized) return [];
+
   const sortedCountries = [...COUNTRIES].sort((a, b) => b.length - a.length);
   const countryPattern = sortedCountries.map(escapeRegex).join("|");
 
-  // Aceita códigos diretos:
-  // BRA12, BRA 12, Bra12, bra 12, PANINI00, PANINI 00
-  const directCodeRegex = new RegExp(`\\b(${countryPattern})\\s*[-_./]?\\s*([0-9OILS]{1,2})\\b`, "gi");
+  const tokenRegex = new RegExp(`\\b(${countryPattern})\\s*[-_./]?\\s*([0-9OILS]{1,2})?\\b|\\b([0-9OILS]{1,2})\\b`, "gi");
   const items = [];
+  let currentCountry = null;
   let match;
 
-  while ((match = directCodeRegex.exec(normalized)) !== null) {
-    const country = match[1].toUpperCase();
-    const number = Number(normalizeOcrNumberText(match[2]));
-
-    if (COUNTRIES.includes(country) && isValidStickerNumber(country, number)) {
-      items.push({ country, number });
-    }
-  }
-
-  // Aceita formato contextual:
-  // ARG 01, 04, 07
-  // BRA 12 13 14
-  const tokenRegex = new RegExp(`\\b(${countryPattern})\\b|\\b(0?[0-9]|1[0-9]|20)\\b`, "gi");
-  let currentCountry = null;
-
   while ((match = tokenRegex.exec(normalized)) !== null) {
-    if (match[1]) {
-      currentCountry = match[1].toUpperCase();
+    const matchedCountry = match[1] ? match[1].toUpperCase() : null;
+    const numberAttachedToCountry = match[2];
+    const standaloneNumber = match[3];
+
+    if (matchedCountry) {
+      currentCountry = matchedCountry;
+
+      if (numberAttachedToCountry !== undefined && numberAttachedToCountry !== "") {
+        const number = Number(normalizeOcrNumberText(numberAttachedToCountry));
+        if (isValidStickerNumber(currentCountry, number)) {
+          items.push({ country: currentCountry, number });
+        }
+      }
+
       continue;
     }
 
-    if (match[2] && currentCountry) {
-      const number = Number(match[2]);
+    if (standaloneNumber !== undefined && standaloneNumber !== "" && currentCountry) {
+      const number = Number(normalizeOcrNumberText(standaloneNumber));
       if (isValidStickerNumber(currentCountry, number)) {
         items.push({ country: currentCountry, number });
       }
     }
   }
 
-  // Remove duplicatas geradas pelo duplo parser na mesma leitura.
-  // Duplicatas reais no texto, como "AUS 13, AUS 13", continuam sendo contadas
-  // pelo groupParsedItems quando aparecerem explicitamente mais de uma vez.
   return items;
+}
+
+function escapeRegex(value) {
+  return String(value).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
 function escapeRegex(value) {
@@ -1111,10 +1110,20 @@ async function importTextFile(event) {
   try {
     const text = await file.text();
 
-    // Substitui o conteúdo anterior para não contar novamente figurinhas já importadas.
+    // Substitui o conteúdo anterior para evitar contagem duplicada.
     $("manualText").value = text;
     clearParsed();
-    parseManualText();
+
+    // Apenas analisa; a atualização ocorre somente pelo botão "Atualizar álbum"
+    // ou pelo auto-apply, se estiver marcado.
+    if ($("autoApply") && $("autoApply").checked) {
+      parseManualText();
+    } else {
+      parsedItems = parseStickerText(text);
+      lastComparison = buildComparison(parsedItems);
+      parsedAlreadyApplied = false;
+      updateParsedResult("TXT importado e analisado", { comparison: lastComparison });
+    }
   } catch (error) {
     alert(`Não foi possível ler o arquivo de texto: ${error.message}`);
   } finally {
@@ -1973,7 +1982,7 @@ async function createA4CanvasPdf(pageDrawers) {
 function buildPdfReportLines() {
   const summary = getSummary();
   const lines = [];
-  lines.push(`Resumo geral: ${summary.ownedTypes}/${TOTAL_STICKERS} no album | faltantes ${summary.missing} | tipos repetidos ${summary.duplicateTypes} | repetidas extras ${summary.duplicateExtras} | total fisico ${summary.physicalTotal}`);
+  lines.push(`Resumo geral: ${summary.ownedTypes}/${TOTAL_STICKERS} no album | faltantes ${summary.missing} | repetidas ${summary.duplicateTypes} | repetidas extras ${summary.duplicateExtras} | total fisico ${summary.physicalTotal}`);
   lines.push("");
   lines.push("Quantidade por pais e figurinhas faltantes:");
   lines.push("");

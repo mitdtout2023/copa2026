@@ -383,3 +383,13 @@ Obrigatório:
   `https://script.google.com/macros/s/AKfycbxI7ejzTDLiZB6slkT8Ld28IbsmBB-WUBpe2SHRI6qBCeKENzD4tVKEngKaOhhM-JQ6/exec`
 - O código de sincronização agora vem preenchido por padrão:
   `marcelo-copa-2026`
+
+
+## Correção de importação TXT e rótulo
+- Corrigida a leitura do TXT para evitar dupla contagem de códigos como `BRA 12`.
+- O parser agora usa uma única estratégia sequencial:
+  - aceita `BRA 12`, `bra12`, `Bra12`;
+  - aceita listas como `ARG 04, 07, 20`;
+  - aceita repetições reais, como `AUS 13, AUS 13`.
+- A importação TXT substitui o conteúdo anterior e limpa o resultado antigo antes de analisar.
+- O rótulo **Tipos repetidos** foi alterado para **Repetidas**.
