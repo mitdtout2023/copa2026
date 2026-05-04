@@ -1,9 +1,11 @@
 /**
  * Copa 2026 - Backend de sincronização compatível com Vercel/iPhone
  *
- * Esta versão evita problema de CORS:
- * - Envio: POST no-cors com Content-Type text/plain
- * - Leitura: JSONP via callback
+ * IMPORTANTE:
+ * 1. Publique como Web App.
+ * 2. Executar como: você.
+ * 3. Quem tem acesso: qualquer pessoa com o link.
+ * 4. Use a URL terminada em /exec.
  */
 
 function doPost(e) {
@@ -16,6 +18,7 @@ function doPost(e) {
     var body = JSON.parse(raw || "{}");
     var action = body.action;
     var syncId = String(body.syncId || "").trim();
+    var requestId = String(body.requestId || "");
 
     if (!syncId) {
       return jsonOutput({ ok: false, error: "syncId obrigatório." });
@@ -35,11 +38,12 @@ function doPost(e) {
         type: "text",
         text: text,
         state: null,
+        requestId: requestId,
         version: version,
         updatedAt: version
       }));
 
-      return jsonOutput({ ok: true, version: version, type: "text" });
+      return jsonOutput({ ok: true, version: version, type: "text", requestId: requestId });
     }
 
     if (action === "pushState") {
@@ -51,11 +55,12 @@ function doPost(e) {
         type: "state",
         text: "",
         state: body.state,
+        requestId: requestId,
         version: version,
         updatedAt: version
       }));
 
-      return jsonOutput({ ok: true, version: version, type: "state" });
+      return jsonOutput({ ok: true, version: version, type: "state", requestId: requestId });
     }
 
     return jsonOutput({ ok: false, error: "Ação inválida." });
@@ -65,9 +70,10 @@ function doPost(e) {
 }
 
 function doGet(e) {
+  var callback = "";
   try {
     var syncId = String((e.parameter && e.parameter.syncId) || "").trim();
-    var callback = String((e.parameter && e.parameter.callback) || "").trim();
+    callback = String((e.parameter && e.parameter.callback) || "").trim();
 
     if (!syncId) {
       return outputResponse({ ok: false, error: "syncId obrigatório." }, callback);
@@ -82,6 +88,7 @@ function doGet(e) {
         type: "",
         text: "",
         state: null,
+        requestId: "",
         version: "",
         updatedAt: ""
       }, callback);
@@ -94,6 +101,7 @@ function doGet(e) {
       type: data.type || "",
       text: data.text || "",
       state: data.state || null,
+      requestId: data.requestId || "",
       version: data.version || "",
       updatedAt: data.updatedAt || ""
     }, callback);

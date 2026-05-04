@@ -207,6 +207,7 @@ function setupEvents() {
   $("sendTextToSync").addEventListener("click", sendTextToSync);
   $("sendAlbumToSync").addEventListener("click", sendAlbumToSync);
   $("syncNow").addEventListener("click", () => syncFromCloud({ manual: true }));
+  $("testSyncConnection").addEventListener("click", testSyncConnection);
   $("autoSyncEnabled").addEventListener("change", saveSyncConfigFromForm);
   $("applyParsed").addEventListener("click", () => applyParsedItems({ silent: false, allowRepeat: true }));
   $("clearParsed").addEventListener("click", clearParsed);
@@ -706,11 +707,33 @@ function clearManualText() {
 
 
 
+
+function normalizeAppsScriptEndpoint(value) {
+  const endpoint = String(value || "").trim();
+
+  if (!endpoint) return "";
+
+  try {
+    const url = new URL(endpoint);
+    url.search = "";
+    url.hash = "";
+
+    // Web App publicado deve terminar em /exec. /dev só funciona para o proprietário e costuma falhar no iPhone.
+    if (url.pathname.endsWith("/dev")) {
+      url.pathname = url.pathname.replace(/\/dev$/, "/exec");
+    }
+
+    return url.toString();
+  } catch {
+    return endpoint;
+  }
+}
+
 function getSyncConfig() {
   try {
     const saved = JSON.parse(localStorage.getItem(SYNC_CONFIG_STORAGE) || "{}");
     return {
-      endpoint: saved.endpoint || "",
+      endpoint: normalizeAppsScriptEndpoint(saved.endpoint || ""),
       syncId: saved.syncId || "",
       autoSync: Boolean(saved.autoSync)
     };
@@ -728,22 +751,33 @@ function loadSyncConfig() {
 }
 
 function saveSyncConfigFromForm() {
-  const endpoint = $("syncEndpoint").value.trim();
+  const endpoint = normalizeAppsScriptEndpoint($("syncEndpoint").value);
   const syncId = $("syncId").value.trim();
   const autoSync = $("autoSyncEnabled").checked;
 
+  if (endpoint && !endpoint.includes("/exec")) {
+    alert("A URL do Google Apps Script deve ser a URL do Web App terminada em /exec.");
+    return;
+  }
+
   localStorage.setItem(SYNC_CONFIG_STORAGE, JSON.stringify({ endpoint, syncId, autoSync }));
+  if ($("syncEndpoint")) $("syncEndpoint").value = endpoint;
   startAutoSyncIfEnabled();
 
   alert("Configuração de sincronização salva.");
 }
 
 function validateSyncConfig() {
-  const endpoint = $("syncEndpoint").value.trim();
+  const endpoint = normalizeAppsScriptEndpoint($("syncEndpoint").value);
   const syncId = $("syncId").value.trim();
 
   if (!endpoint) {
     alert("Informe a URL do Google Apps Script.");
+    return null;
+  }
+
+  if (!endpoint.includes("/exec")) {
+    alert("A URL precisa ser a URL do Web App terminada em /exec. Não use /dev.");
     return null;
   }
 
@@ -752,9 +786,141 @@ function validateSyncConfig() {
     return null;
   }
 
+  $("syncEndpoint").value = endpoint;
   return { endpoint, syncId, autoSync: $("autoSyncEnabled").checked };
 }
 
+function makeSyncRequestId() {
+  return `req-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+}
+
+function sendToAppsScriptNoCors(endpoint, payload) {
+  return fetch(endpoint, {
+    method: "POST",
+    mode: "no-cors",
+    headers: {
+      "Content-Type": "text/plain;charset=utf-8"
+    },
+    body: JSON.stringify(payload)
+  });
+}
+
+function getFromAppsScriptJsonp(endpoint, syncId) {
+  return new Promise((resolve, reject) => {
+    const callbackName = `copaSyncCallback_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+    const url = new URL(endpoint);
+
+    url.searchParams.set("syncId", syncId);
+    url.searchParams.set("callback", callbackName);
+
+    const script = document.createElement("script");
+    const timeout = setTimeout(() => {
+      cleanup();
+      reject(new Error("Tempo esgotado ao consultar sincronização. Verifique se o Web App está publicado como 'qualquer pessoa com o link'."));
+    }, 15000);
+
+    function cleanup() {
+      clearTimeout(timeout);
+      delete window[callbackName];
+      script.remove();
+    }
+
+    window[callbackName] = (data) => {
+      cleanup();
+      resolve(data);
+    };
+
+    script.onerror = () => {
+      cleanup();
+      reject(new Error("Não foi possível acessar o Google Apps Script. Verifique se a URL termina em /exec e se o Web App está público."));
+    };
+
+    script.src = url.toString();
+    document.head.appendChild(script);
+  });
+}
+
+async function verifySyncWrite(config, requestId, expectedType) {
+  // Apps Script pode demorar alguns instantes para gravar.
+  for (let attempt = 1; attempt <= 5; attempt++) {
+    await new Promise((resolve) => setTimeout(resolve, 1200));
+    const data = await getFromAppsScriptJsonp(config.endpoint, config.syncId);
+
+    if (data.ok && data.requestId === requestId && (!expectedType || data.type === expectedType)) {
+      return data;
+    }
+  }
+
+  throw new Error("Envio não confirmado pelo Google Apps Script. Verifique se você atualizou o código do Apps Script e reimplantou o Web App.");
+}
+
+async function testSyncConnection() {
+  const config = validateSyncConfig();
+  if (!config) return;
+
+  localStorage.setItem(SYNC_CONFIG_STORAGE, JSON.stringify(config));
+
+  try {
+    const data = await getFromAppsScriptJsonp(config.endpoint, config.syncId);
+
+    if (!data.ok) {
+      throw new Error(data.error || "Resposta inválida.");
+    }
+
+    alert(`Conexão OK.\n\nCódigo: ${config.syncId}\nTipo atual: ${data.type || "(sem dados ainda)"}\nÚltima versão: ${data.version || "(sem versão)"}`);
+  } catch (error) {
+    alert(`Erro no teste de sincronização: ${error.message}`);
+  }
+}
+
+async function sendTextToSync() {
+  const config = validateSyncConfig();
+  if (!config) return;
+
+  const text = $("manualText").value.trim();
+  if (!text) {
+    alert("Cole ou importe o arquivo TXT antes de enviar para o iPhone.");
+    return;
+  }
+
+  const items = parseStickerText(text);
+  if (!items.length) {
+    alert("Nenhuma figurinha válida foi encontrada no texto.");
+    return;
+  }
+
+  localStorage.setItem(SYNC_CONFIG_STORAGE, JSON.stringify(config));
+
+  const requestId = makeSyncRequestId();
+  const payload = {
+    action: "push",
+    syncId: config.syncId,
+    requestId,
+    text,
+    createdAt: new Date().toISOString()
+  };
+
+  $("aiResult").textContent = "Enviando TXT para sincronização...";
+
+  try {
+    await sendToAppsScriptNoCors(config.endpoint, payload);
+    const verification = await verifySyncWrite(config, requestId, "text");
+
+    $("aiResult").textContent = [
+      "TXT enviado e confirmado na sincronização.",
+      "",
+      `Figurinhas identificadas: ${items.length}`,
+      `Código de sincronização: ${config.syncId}`,
+      `Versão: ${verification.version}`,
+      "",
+      "No iPhone, toque em “Sincronizar agora” ou deixe a sincronização automática ligada."
+    ].join("\n");
+
+    alert("TXT enviado e confirmado. Agora sincronize o iPhone.");
+  } catch (error) {
+    alert(`Erro ao enviar TXT para sincronização: ${error.message}`);
+  }
+}
 
 async function sendAlbumToSync() {
   const config = validateSyncConfig();
@@ -762,9 +928,11 @@ async function sendAlbumToSync() {
 
   localStorage.setItem(SYNC_CONFIG_STORAGE, JSON.stringify(config));
 
+  const requestId = makeSyncRequestId();
   const payload = {
     action: "pushState",
     syncId: config.syncId,
+    requestId,
     state: exportSerializableState(),
     createdAt: new Date().toISOString()
   };
@@ -773,16 +941,18 @@ async function sendAlbumToSync() {
 
   try {
     await sendToAppsScriptNoCors(config.endpoint, payload);
+    const verification = await verifySyncWrite(config, requestId, "state");
 
     $("aiResult").textContent = [
-      "Álbum completo enviado para sincronização.",
+      "Álbum completo enviado e confirmado.",
       "",
       `Código de sincronização: ${config.syncId}`,
+      `Versão: ${verification.version}`,
       "",
-      "No iPhone, aguarde alguns segundos e toque em “Sincronizar agora”, ou deixe a sincronização automática ligada."
+      "No iPhone, toque em “Sincronizar agora” ou deixe a sincronização automática ligada."
     ].join("\n");
 
-    alert("Álbum enviado. Aguarde alguns segundos e sincronize o iPhone.");
+    alert("Álbum enviado e confirmado. Agora sincronize o iPhone.");
   } catch (error) {
     alert(`Erro ao enviar álbum para sincronização: ${error.message}`);
   }
@@ -828,54 +998,6 @@ function applySyncedState(remoteState) {
   renderAll();
 }
 
-
-async function sendTextToSync() {
-  const config = validateSyncConfig();
-  if (!config) return;
-
-  const text = $("manualText").value.trim();
-  if (!text) {
-    alert("Cole ou importe o arquivo TXT antes de enviar para o iPhone.");
-    return;
-  }
-
-  const items = parseStickerText(text);
-  if (!items.length) {
-    alert("Nenhuma figurinha válida foi encontrada no texto.");
-    return;
-  }
-
-  localStorage.setItem(SYNC_CONFIG_STORAGE, JSON.stringify(config));
-
-  const payload = {
-    action: "push",
-    syncId: config.syncId,
-    text,
-    createdAt: new Date().toISOString()
-  };
-
-  $("aiResult").textContent = "Enviando TXT para sincronização...";
-
-  try {
-    await sendToAppsScriptNoCors(config.endpoint, payload);
-
-    const localVersion = `sent-${Date.now()}`;
-
-    $("aiResult").textContent = [
-      "TXT enviado para sincronização.",
-      "",
-      `Figurinhas identificadas: ${items.length}`,
-      `Código de sincronização: ${config.syncId}`,
-      "",
-      "No iPhone, deixe o app aberto com a sincronização automática ligada ou toque em “Sincronizar agora”."
-    ].join("\n");
-
-    alert("TXT enviado. Aguarde alguns segundos e toque em “Sincronizar agora” no iPhone.");
-  } catch (error) {
-    alert(`Erro ao enviar TXT para sincronização: ${error.message}`);
-  }
-}
-
 function startAutoSyncIfEnabled() {
   if (syncTimer) {
     clearInterval(syncTimer);
@@ -892,54 +1014,6 @@ function startAutoSyncIfEnabled() {
 
   syncFromCloud({ manual: false });
 }
-
-
-function sendToAppsScriptNoCors(endpoint, payload) {
-  return fetch(endpoint, {
-    method: "POST",
-    mode: "no-cors",
-    headers: {
-      "Content-Type": "text/plain;charset=utf-8"
-    },
-    body: JSON.stringify(payload)
-  });
-}
-
-function getFromAppsScriptJsonp(endpoint, syncId) {
-  return new Promise((resolve, reject) => {
-    const callbackName = `copaSyncCallback_${Date.now()}_${Math.random().toString(36).slice(2)}`;
-    const url = new URL(endpoint);
-
-    url.searchParams.set("syncId", syncId);
-    url.searchParams.set("callback", callbackName);
-
-    const script = document.createElement("script");
-    const timeout = setTimeout(() => {
-      cleanup();
-      reject(new Error("Tempo esgotado ao consultar sincronização."));
-    }, 15000);
-
-    function cleanup() {
-      clearTimeout(timeout);
-      delete window[callbackName];
-      script.remove();
-    }
-
-    window[callbackName] = (data) => {
-      cleanup();
-      resolve(data);
-    };
-
-    script.onerror = () => {
-      cleanup();
-      reject(new Error("Não foi possível acessar o Google Apps Script. Verifique a URL /exec e a permissão do Web App."));
-    };
-
-    script.src = url.toString();
-    document.head.appendChild(script);
-  });
-}
-
 
 async function syncFromCloud({ manual = false } = {}) {
   const config = getSyncConfig();
@@ -969,7 +1043,7 @@ async function syncFromCloud({ manual = false } = {}) {
 
     if (data.state) {
       const confirmed = manual
-        ? confirm("Álbum completo encontrado na sincronização.\n\nDeseja substituir/atualizar o álbum deste iPhone com o álbum enviado pelo computador?")
+        ? confirm("Álbum completo encontrado na sincronização.\n\nDeseja substituir/atualizar o álbum deste dispositivo com o álbum enviado pelo computador?")
         : true;
 
       if (!confirmed) return;
@@ -978,7 +1052,7 @@ async function syncFromCloud({ manual = false } = {}) {
       localStorage.setItem(SYNC_LAST_APPLIED_STORAGE, data.version);
 
       if (manual) {
-        alert("Álbum do iPhone atualizado com o álbum enviado pelo computador.");
+        alert("Álbum atualizado com o álbum enviado pelo computador.");
       } else {
         const status = $("saveStatus");
         if (status) status.textContent = `Álbum sincronizado automaticamente em ${new Date().toLocaleString("pt-BR")}.`;
@@ -994,7 +1068,7 @@ async function syncFromCloud({ manual = false } = {}) {
     }
 
     const confirmed = manual
-      ? confirm(`TXT encontrado na sincronização.\n\nFigurinhas identificadas: ${items.length}\n\nDeseja atualizar o álbum deste iPhone?`)
+      ? confirm(`TXT encontrado na sincronização.\n\nFigurinhas identificadas: ${items.length}\n\nDeseja atualizar o álbum deste dispositivo?`)
       : true;
 
     if (!confirmed) return;
@@ -1018,6 +1092,7 @@ async function syncFromCloud({ manual = false } = {}) {
     if (manual) alert(`Erro ao sincronizar: ${error.message}`);
   }
 }
+
 
 
 function encodeImportTextForUrl(text) {

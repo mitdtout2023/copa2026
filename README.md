@@ -360,34 +360,16 @@ Novos códigos seguem a regra geral de `01` até `20`, exceto **PANINI**, que pe
 A lista do app agora contempla os países informados da CONMEBOL, UEFA, CONCACAF, AFC, CAF e OFC, mantendo também os códigos especiais já existentes, como **FWC** e **PANINI**.
 
 
-## Correção da sincronização computador → iPhone
+## Correção final da sincronização
 
-Agora existem duas formas de sincronizar:
+Esta versão corrige:
+- `Enviar álbum` não mostra mais sucesso falso.
+- Após enviar, o app consulta o Apps Script e confirma se a gravação realmente chegou.
+- `Sincronizar agora` usa JSONP e valida melhor a URL `/exec`.
+- Adicionado botão **Testar sync**.
 
-### Enviar TXT
-Use quando quiser enviar apenas um texto/lista de figurinhas.
-
-### Enviar álbum
-Use quando você digitou, clicou ou atualizou figurinhas no computador e quer que o iPhone reflita o álbum completo.
-
-Importante:
-- Atualize também o código do Google Apps Script com o novo arquivo `google-apps-script-sync.gs`.
-- O iPhone precisa estar usando esta versão do app.
-- Use o mesmo URL do Google Apps Script e o mesmo Código de sincronização no computador e no iPhone.
-
-
-## Correção: erro Failed to fetch na sincronização
-
-Esta versão corrige o erro comum ao enviar do Vercel para Google Apps Script.
-
-Mudanças:
-- Envio para Apps Script usa `POST` em modo `no-cors`.
-- Leitura/sincronização usa JSONP.
-- É obrigatório substituir o código do Google Apps Script pelo novo arquivo `google-apps-script-sync.gs` e criar uma nova implantação do Web App.
-
-Passos:
-1. Substitua o código no Apps Script pelo novo `google-apps-script-sync.gs`.
-2. Clique em Implantar > Gerenciar implantações.
-3. Edite a implantação ou crie uma nova implantação.
-4. Copie a URL terminada em `/exec`.
-5. Cole essa URL no computador e no iPhone.
+Obrigatório:
+1. Substitua o código do Google Apps Script pelo arquivo `google-apps-script-sync.gs` deste ZIP.
+2. Reimplante o Web App.
+3. Use a URL terminada em `/exec`.
+4. Use o mesmo Código de sincronização no computador e no iPhone.
