@@ -400,3 +400,13 @@ Obrigatório:
 - Também tenta baixar automaticamente o arquivo `.html`.
 - A nova aba inclui botões **Baixar arquivo** e **Salvar como PDF**.
 - Isso evita falhas em navegadores/PWA que bloqueiam download automático por Blob.
+
+
+## Ajustes de Álbum e Relatórios
+- Removido o botão **Ler figurinha** da aba **Álbum**.
+- O usuário continua podendo adicionar figurinhas tocando diretamente na grade do álbum.
+- Corrigidos os relatórios para abrirem em nova aba.
+- O relatório agora oferece botões internos:
+  - **Baixar HTML**
+  - **Salvar como PDF**
+- Isso evita falhas de download automático em navegadores/PWA.

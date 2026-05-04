@@ -197,7 +197,6 @@ function setupCountryFilter() {
 
 function setupEvents() {
   $("countryFilter").addEventListener("change", renderAlbum);
-  $("readStickerButton").addEventListener("click", readStickerByCode);
   $("toggleRemoveMode").addEventListener("click", toggleRemoveMode);
   $("resetVisibleCountry").addEventListener("click", resetVisibleCountry);
   $("copyMissing").addEventListener("click", () => copyText(buildMissingText()));
@@ -295,25 +294,9 @@ function formatStickerCode(item) {
 }
 
 
-function parseSingleStickerCode(rawCode) {
-  const items = parseStickerCodesStrict(rawCode);
-  return items.length ? items[0] : null;
-}
 
-function readStickerByCode() {
-  const rawCode = prompt("Digite ou cole o(s) código(s) da figurinha.\n\nExemplos:\nJPN 10\nJPN 10, JPN 15, PANINI 00\nBRA 01, ARG 12");
 
-  if (rawCode === null) return;
 
-  const items = parseStickerCodesStrict(rawCode);
-
-  if (!items.length) {
-    alert("Código inválido. Use o formato JPN 10, BRA 01, ARG 12 etc.");
-    return;
-  }
-
-  applyReadStickerItems(items, "manual");
-}
 
 
 
@@ -1344,38 +1327,107 @@ function exportDuplicatesPdfReport() {
 
 function downloadReportFile(reportHtml, filename) {
   const finalHtml = injectReportOpenActions(reportHtml, filename);
-
-  // 1) Abre o relatório em nova aba/janela. Isso torna o botão claramente funcional.
   const reportWindow = window.open("", "_blank");
-  if (reportWindow) {
-    reportWindow.document.open();
-    reportWindow.document.write(finalHtml);
-    reportWindow.document.close();
-  }
-
-  // 2) Também tenta baixar automaticamente o HTML do relatório.
-  // Em alguns navegadores/PWA, o download pode ser bloqueado; nesse caso, a nova aba continua disponível.
-  try {
-    const blob = new Blob([finalHtml], { type: "text/html;charset=utf-8" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-
-    a.href = url;
-    a.download = filename;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-
-    setTimeout(() => URL.revokeObjectURL(url), 2000);
-  } catch (error) {
-    if (!reportWindow) {
-      alert(`Não foi possível gerar o relatório: ${error.message}`);
-    }
-  }
 
   if (!reportWindow) {
-    alert("O relatório foi gerado. Se ele não abrir, permita pop-ups para este site.");
+    // Fallback: mostra o relatório na mesma aba caso pop-up seja bloqueado.
+    document.open();
+    document.write(finalHtml);
+    document.close();
+    return;
   }
+
+  reportWindow.document.open();
+  reportWindow.document.write(finalHtml);
+  reportWindow.document.close();
+}
+
+function injectReportOpenActions(reportHtml, filename) {
+  const safeFilename = JSON.stringify(filename);
+
+  const actions = `
+    <script>
+      const REPORT_FILENAME = ${safeFilename};
+
+      function baixarRelatorioGerado() {
+        const html = "<!doctype html>\\n" + document.documentElement.outerHTML;
+        const blob = new Blob([html], { type: "text/html;charset=utf-8" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+
+        a.href = url;
+        a.download = REPORT_FILENAME;
+        a.style.display = "none";
+        document.body.appendChild(a);
+        a.click();
+
+        setTimeout(function () {
+          a.remove();
+          URL.revokeObjectURL(url);
+        }, 500);
+      }
+
+      function salvarComoPdf() {
+        window.print();
+      }
+    <\/script>
+  `;
+
+  const actionStyles = `
+    <style>
+      .report-actions {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+        margin: 0 auto 12px;
+        max-width: 210mm;
+      }
+
+      .report-actions button {
+        border: 0;
+        border-radius: 10px;
+        padding: 9px 12px;
+        font-weight: 700;
+        cursor: pointer;
+        background: #0f172a;
+        color: #ffffff;
+        font-family: Arial, Helvetica, sans-serif;
+      }
+
+      .report-actions .secondary {
+        background: #e2e8f0;
+        color: #0f172a;
+      }
+
+      @media print {
+        .report-actions,
+        .screen-help {
+          display: none !important;
+        }
+      }
+    </style>
+  `;
+
+  const helpReplacement = `
+    <div class="screen-help">
+      Relatório gerado. Use os botões abaixo para salvar.
+    </div>
+    <div class="report-actions">
+      <button type="button" onclick="baixarRelatorioGerado()">Baixar HTML</button>
+      <button type="button" onclick="salvarComoPdf()">Salvar como PDF</button>
+      <button type="button" class="secondary" onclick="window.close()">Fechar</button>
+    </div>
+  `;
+
+  let output = reportHtml
+    .replace("</head>", `${actions}${actionStyles}</head>`)
+    .replace(/<div class="screen-help">.*?<\/div>/s, helpReplacement);
+
+  if (!output.includes("report-actions")) {
+    output = output.replace("<body>", `<body>${helpReplacement}`);
+  }
+
+  return output;
 }
 
 function injectReportOpenActions(reportHtml, filename) {

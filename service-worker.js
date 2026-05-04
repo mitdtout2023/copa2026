@@ -1,4 +1,4 @@
-const CACHE_NAME = "figurinhas-copa-2026-v46-fix-relatorio-album";
+const CACHE_NAME = "figurinhas-copa-2026-v47-remove-ler-fix-reports";
 const APP_SHELL = [
   "./",
   "./index.html",
