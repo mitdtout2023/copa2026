@@ -772,27 +772,17 @@ async function sendAlbumToSync() {
   $("aiResult").textContent = "Enviando álbum completo para o iPhone...";
 
   try {
-    const response = await fetch(config.endpoint, {
-      method: "POST",
-      body: JSON.stringify(payload)
-    });
-
-    const data = await response.json();
-
-    if (!data.ok) {
-      throw new Error(data.error || "Falha ao enviar álbum.");
-    }
+    await sendToAppsScriptNoCors(config.endpoint, payload);
 
     $("aiResult").textContent = [
       "Álbum completo enviado para sincronização.",
       "",
       `Código de sincronização: ${config.syncId}`,
-      `Versão: ${data.version || "(sem versão)"}`,
       "",
-      "No iPhone, deixe o app aberto com a sincronização automática ligada ou toque em “Sincronizar agora”."
+      "No iPhone, aguarde alguns segundos e toque em “Sincronizar agora”, ou deixe a sincronização automática ligada."
     ].join("\n");
 
-    alert("Álbum enviado. O iPhone será atualizado quando sincronizar.");
+    alert("Álbum enviado. Aguarde alguns segundos e sincronize o iPhone.");
   } catch (error) {
     alert(`Erro ao enviar álbum para sincronização: ${error.message}`);
   }
@@ -867,19 +857,12 @@ async function sendTextToSync() {
   $("aiResult").textContent = "Enviando TXT para sincronização...";
 
   try {
-    const response = await fetch(config.endpoint, {
-      method: "POST",
-      body: JSON.stringify(payload)
-    });
+    await sendToAppsScriptNoCors(config.endpoint, payload);
 
-    const data = await response.json();
-
-    if (!data.ok) {
-      throw new Error(data.error || "Falha ao enviar dados.");
-    }
+    const localVersion = `sent-${Date.now()}`;
 
     $("aiResult").textContent = [
-      "TXT enviado para a nuvem.",
+      "TXT enviado para sincronização.",
       "",
       `Figurinhas identificadas: ${items.length}`,
       `Código de sincronização: ${config.syncId}`,
@@ -887,9 +870,9 @@ async function sendTextToSync() {
       "No iPhone, deixe o app aberto com a sincronização automática ligada ou toque em “Sincronizar agora”."
     ].join("\n");
 
-    alert("Lista enviada. O iPhone será atualizado quando sincronizar.");
+    alert("TXT enviado. Aguarde alguns segundos e toque em “Sincronizar agora” no iPhone.");
   } catch (error) {
-    alert(`Erro ao enviar para sincronização: ${error.message}`);
+    alert(`Erro ao enviar TXT para sincronização: ${error.message}`);
   }
 }
 
@@ -910,6 +893,54 @@ function startAutoSyncIfEnabled() {
   syncFromCloud({ manual: false });
 }
 
+
+function sendToAppsScriptNoCors(endpoint, payload) {
+  return fetch(endpoint, {
+    method: "POST",
+    mode: "no-cors",
+    headers: {
+      "Content-Type": "text/plain;charset=utf-8"
+    },
+    body: JSON.stringify(payload)
+  });
+}
+
+function getFromAppsScriptJsonp(endpoint, syncId) {
+  return new Promise((resolve, reject) => {
+    const callbackName = `copaSyncCallback_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+    const url = new URL(endpoint);
+
+    url.searchParams.set("syncId", syncId);
+    url.searchParams.set("callback", callbackName);
+
+    const script = document.createElement("script");
+    const timeout = setTimeout(() => {
+      cleanup();
+      reject(new Error("Tempo esgotado ao consultar sincronização."));
+    }, 15000);
+
+    function cleanup() {
+      clearTimeout(timeout);
+      delete window[callbackName];
+      script.remove();
+    }
+
+    window[callbackName] = (data) => {
+      cleanup();
+      resolve(data);
+    };
+
+    script.onerror = () => {
+      cleanup();
+      reject(new Error("Não foi possível acessar o Google Apps Script. Verifique a URL /exec e a permissão do Web App."));
+    };
+
+    script.src = url.toString();
+    document.head.appendChild(script);
+  });
+}
+
+
 async function syncFromCloud({ manual = false } = {}) {
   const config = getSyncConfig();
 
@@ -919,11 +950,7 @@ async function syncFromCloud({ manual = false } = {}) {
   }
 
   try {
-    const url = new URL(config.endpoint);
-    url.searchParams.set("syncId", config.syncId);
-
-    const response = await fetch(url.toString());
-    const data = await response.json();
+    const data = await getFromAppsScriptJsonp(config.endpoint, config.syncId);
 
     if (!data.ok) {
       throw new Error(data.error || "Falha ao consultar sincronização.");

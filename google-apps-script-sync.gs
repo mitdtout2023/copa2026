@@ -1,18 +1,19 @@
 /**
- * Copa 2026 - Backend simples de sincronização
+ * Copa 2026 - Backend de sincronização compatível com Vercel/iPhone
  *
- * Como usar:
- * 1. Crie um projeto no Google Apps Script.
- * 2. Cole este código em Code.gs.
- * 3. Faça Deploy > Web app.
- * 4. Execute como: você.
- * 5. Quem tem acesso: qualquer pessoa com o link.
- * 6. Copie a URL /exec e cole no app no campo "URL do Google Apps Script".
+ * Esta versão evita problema de CORS:
+ * - Envio: POST no-cors com Content-Type text/plain
+ * - Leitura: JSONP via callback
  */
 
 function doPost(e) {
   try {
-    var body = JSON.parse(e.postData.contents || "{}");
+    var raw = "";
+    if (e && e.postData && e.postData.contents) {
+      raw = e.postData.contents;
+    }
+
+    var body = JSON.parse(raw || "{}");
     var action = body.action;
     var syncId = String(body.syncId || "").trim();
 
@@ -66,38 +67,49 @@ function doPost(e) {
 function doGet(e) {
   try {
     var syncId = String((e.parameter && e.parameter.syncId) || "").trim();
+    var callback = String((e.parameter && e.parameter.callback) || "").trim();
 
     if (!syncId) {
-      return jsonOutput({ ok: false, error: "syncId obrigatório." });
+      return outputResponse({ ok: false, error: "syncId obrigatório." }, callback);
     }
 
     var props = PropertiesService.getScriptProperties();
     var raw = props.getProperty("sync:" + syncId);
 
     if (!raw) {
-      return jsonOutput({
+      return outputResponse({
         ok: true,
         type: "",
         text: "",
         state: null,
         version: "",
         updatedAt: ""
-      });
+      }, callback);
     }
 
     var data = JSON.parse(raw);
 
-    return jsonOutput({
+    return outputResponse({
       ok: true,
       type: data.type || "",
       text: data.text || "",
       state: data.state || null,
       version: data.version || "",
       updatedAt: data.updatedAt || ""
-    });
+    }, callback);
   } catch (err) {
-    return jsonOutput({ ok: false, error: String(err) });
+    return outputResponse({ ok: false, error: String(err) }, callback);
   }
+}
+
+function outputResponse(obj, callback) {
+  if (callback && /^[A-Za-z_$][A-Za-z0-9_$]*$/.test(callback)) {
+    return ContentService
+      .createTextOutput(callback + "(" + JSON.stringify(obj) + ");")
+      .setMimeType(ContentService.MimeType.JAVASCRIPT);
+  }
+
+  return jsonOutput(obj);
 }
 
 function jsonOutput(obj) {

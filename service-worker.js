@@ -1,4 +1,4 @@
-const CACHE_NAME = "figurinhas-copa-2026-v41-sync-album-state";
+const CACHE_NAME = "figurinhas-copa-2026-v42-sync-cors-jsonp";
 const APP_SHELL = [
   "./",
   "./index.html",

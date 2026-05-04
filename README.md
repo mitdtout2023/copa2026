@@ -374,3 +374,20 @@ Importante:
 - Atualize também o código do Google Apps Script com o novo arquivo `google-apps-script-sync.gs`.
 - O iPhone precisa estar usando esta versão do app.
 - Use o mesmo URL do Google Apps Script e o mesmo Código de sincronização no computador e no iPhone.
+
+
+## Correção: erro Failed to fetch na sincronização
+
+Esta versão corrige o erro comum ao enviar do Vercel para Google Apps Script.
+
+Mudanças:
+- Envio para Apps Script usa `POST` em modo `no-cors`.
+- Leitura/sincronização usa JSONP.
+- É obrigatório substituir o código do Google Apps Script pelo novo arquivo `google-apps-script-sync.gs` e criar uma nova implantação do Web App.
+
+Passos:
+1. Substitua o código no Apps Script pelo novo `google-apps-script-sync.gs`.
+2. Clique em Implantar > Gerenciar implantações.
+3. Edite a implantação ou crie uma nova implantação.
+4. Copie a URL terminada em `/exec`.
+5. Cole essa URL no computador e no iPhone.
