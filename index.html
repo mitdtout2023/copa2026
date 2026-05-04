@@ -50,7 +50,7 @@
       <button class="tab active" data-tab="album">Álbum</button>
       <button class="tab" data-tab="missing">Faltantes</button>
       <button class="tab" data-tab="duplicates">Repetidas</button>
-      <button class="tab" data-tab="ai">Importar texto</button>
+      <button class="tab" data-tab="ai">Digitar figurinha</button>
       <button class="tab" data-tab="settings">Backup / PDF</button>
     </nav>
 
@@ -136,26 +136,25 @@ ARG 04, 07, 20"></textarea>
           </label>
           <div class="button-row import-actions">
             <button id="parseManual" class="primary">Atualizar álbum</button>
-            <button id="generateImportLink" class="ghost">Gerar link</button>
             <button id="clearManualText" class="ghost">Limpar</button>
           </div>
-          <p id="importLinkHelp" class="help-text">Você pode digitar os códigos manualmente ou importar um TXT. Depois clique em “Atualizar álbum”, “Gerar link” ou “Enviar para iPhone”.</p>
+          <p id="importLinkHelp" class="help-text">Você pode digitar os códigos manualmente ou importar um TXT. Depois clique em “Atualizar álbum”, “Enviar TXT” ou “Enviar álbum”.</p>
 
           <div class="sync-box">
             <h4>Sincronização computador → iPhone</h4>
             <label>
               URL do Google Apps Script
-              <input id="syncEndpoint" type="url" placeholder="https://script.google.com/macros/s/.../exec" />
+              <input id="syncEndpoint" type="url" value="https://script.google.com/macros/s/AKfycbxI7ejzTDLiZB6slkT8Ld28IbsmBB-WUBpe2SHRI6qBCeKENzD4tVKEngKaOhhM-JQ6/exec" placeholder="https://script.google.com/macros/s/.../exec" />
             </label>
             <label>
               Código de sincronização
-              <input id="syncId" type="text" placeholder="Ex.: marcelo-copa-2026" />
+              <input id="syncId" type="text" value="marcelo-copa-2026" placeholder="Ex.: marcelo-copa-2026" />
             </label>
             <div class="button-row sync-actions">
               <button id="saveSyncConfig" class="ghost" type="button">Salvar sync</button>
               <button id="sendTextToSync" class="primary" type="button">Enviar TXT</button>
               <button id="sendAlbumToSync" class="primary" type="button">Enviar álbum</button>
-              <button id="sendAlbumToSync" class="primary" type="button">Enviar álbum</button>
+              
               <button id="syncNow" class="ghost" type="button">Sincronizar agora</button>
               <button id="testSyncConnection" class="ghost" type="button">Testar sync</button>
             </div>

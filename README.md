@@ -373,3 +373,13 @@ Obrigatório:
 2. Reimplante o Web App.
 3. Use a URL terminada em `/exec`.
 4. Use o mesmo Código de sincronização no computador e no iPhone.
+
+
+## Ajustes de interface e sincronização
+- Removida duplicidade do botão **Enviar álbum**.
+- Removido o botão **Gerar link**.
+- A aba **Importar texto** foi renomeada para **Digitar figurinha**.
+- A URL do Google Apps Script agora vem preenchida por padrão:
+  `https://script.google.com/macros/s/AKfycbxI7ejzTDLiZB6slkT8Ld28IbsmBB-WUBpe2SHRI6qBCeKENzD4tVKEngKaOhhM-JQ6/exec`
+- O código de sincronização agora vem preenchido por padrão:
+  `marcelo-copa-2026`

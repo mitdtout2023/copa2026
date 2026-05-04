@@ -101,6 +101,8 @@ function getStickerRangeLabel(country) {
 const STORAGE_KEY = "figurinhas-copa-2026-state-v2";
 const SYNC_CONFIG_STORAGE = "figurinhas-copa-2026-sync-config-v1";
 const SYNC_LAST_APPLIED_STORAGE = "figurinhas-copa-2026-sync-last-applied-v1";
+const DEFAULT_SYNC_ENDPOINT = "https://script.google.com/macros/s/AKfycbxI7ejzTDLiZB6slkT8Ld28IbsmBB-WUBpe2SHRI6qBCeKENzD4tVKEngKaOhhM-JQ6/exec";
+const DEFAULT_SYNC_ID = "marcelo-copa-2026";
 const REMOVE_PASSWORD = "talita10";
 const LEGACY_STORAGE_KEY = "figurinhas-copa-2026-state-v1";
 
@@ -201,7 +203,6 @@ function setupEvents() {
   $("copyMissing").addEventListener("click", () => copyText(buildMissingText()));
   $("copyDuplicates").addEventListener("click", () => copyText(buildDuplicatesText()));
   $("parseManual").addEventListener("click", parseManualText);
-  $("generateImportLink").addEventListener("click", generateImportLinkForIPhone);
   $("clearManualText").addEventListener("click", clearManualText);
   $("saveSyncConfig").addEventListener("click", saveSyncConfigFromForm);
   $("sendTextToSync").addEventListener("click", sendTextToSync);
@@ -371,7 +372,6 @@ function applyReadStickerItems(items, source = "foto") {
 
   saveState();
   renderAll();
-  handleImportFromUrl();
   loadSyncConfig();
   startAutoSyncIfEnabled();
 
@@ -733,12 +733,12 @@ function getSyncConfig() {
   try {
     const saved = JSON.parse(localStorage.getItem(SYNC_CONFIG_STORAGE) || "{}");
     return {
-      endpoint: normalizeAppsScriptEndpoint(saved.endpoint || ""),
-      syncId: saved.syncId || "",
+      endpoint: normalizeAppsScriptEndpoint(saved.endpoint || DEFAULT_SYNC_ENDPOINT),
+      syncId: saved.syncId || DEFAULT_SYNC_ID,
       autoSync: Boolean(saved.autoSync)
     };
   } catch {
-    return { endpoint: "", syncId: "", autoSync: false };
+    return { endpoint: DEFAULT_SYNC_ENDPOINT, syncId: DEFAULT_SYNC_ID, autoSync: false };
   }
 }
 
@@ -1095,110 +1095,13 @@ async function syncFromCloud({ manual = false } = {}) {
 
 
 
-function encodeImportTextForUrl(text) {
-  const utf8 = new TextEncoder().encode(text);
-  let binary = "";
-  for (const byte of utf8) {
-    binary += String.fromCharCode(byte);
-  }
 
-  return btoa(binary)
-    .replace(/\+/g, "-")
-    .replace(/\//g, "_")
-    .replace(/=+$/g, "");
-}
 
-function decodeImportTextFromUrl(encoded) {
-  let base64 = String(encoded || "")
-    .replace(/-/g, "+")
-    .replace(/_/g, "/");
 
-  while (base64.length % 4) {
-    base64 += "=";
-  }
 
-  const binary = atob(base64);
-  const bytes = new Uint8Array(binary.length);
 
-  for (let index = 0; index < binary.length; index++) {
-    bytes[index] = binary.charCodeAt(index);
-  }
 
-  return new TextDecoder().decode(bytes);
-}
 
-async function generateImportLinkForIPhone() {
-  const text = $("manualText").value.trim();
-
-  if (!text) {
-    alert("Cole ou importe um arquivo TXT antes de gerar o link para o iPhone.");
-    return;
-  }
-
-  const encoded = encodeImportTextForUrl(text);
-  const url = new URL(window.location.href);
-  url.searchParams.set("importTxt", encoded);
-  url.searchParams.set("autoApply", "1");
-  url.hash = "";
-
-  const link = url.toString();
-
-  $("aiResult").textContent = [
-    "Link gerado para atualizar o app no iPhone:",
-    "",
-    link,
-    "",
-    "Como usar:",
-    "1. Copie este link.",
-    "2. Envie para o iPhone por WhatsApp, e-mail, AirDrop ou Notas.",
-    "3. Abra no Safari do iPhone.",
-    "4. Confirme a importação no app."
-  ].join("\n");
-
-  try {
-    await navigator.clipboard.writeText(link);
-    alert("Link copiado. Abra este link no Safari do iPhone para atualizar o app local.");
-  } catch {
-    prompt("Copie o link abaixo e abra no Safari do iPhone:", link);
-  }
-}
-
-function handleImportFromUrl() {
-  const params = new URLSearchParams(window.location.search);
-  const encoded = params.get("importTxt");
-
-  if (!encoded) return;
-
-  try {
-    const importedText = decodeImportTextFromUrl(encoded);
-    $("manualText").value = importedText;
-    clearParsed();
-
-    const items = parseStickerText(importedText);
-    if (!items.length) {
-      alert("O link foi aberto, mas nenhum código de figurinha foi identificado.");
-      return;
-    }
-
-    const confirmed = confirm(`Link de importação recebido.\n\nForam identificadas ${items.length} figurinhas no texto.\n\nDeseja atualizar o álbum deste iPhone agora?`);
-
-    parsedAlreadyApplied = false;
-    parsedItems = items;
-    lastComparison = buildComparison(parsedItems);
-    updateParsedResult("Texto recebido por link", { comparison: lastComparison });
-
-    if (confirmed) {
-      applyParsedItems({ silent: true });
-      alert("Álbum atualizado neste iPhone.");
-    }
-
-    // Limpa os parâmetros da URL para evitar reaplicar ao recarregar a página.
-    const cleanUrl = `${window.location.origin}${window.location.pathname}${window.location.hash || ""}`;
-    window.history.replaceState({}, document.title, cleanUrl);
-  } catch (error) {
-    alert(`Não foi possível importar o link: ${error.message}`);
-  }
-}
 
 
 async function importTextFile(event) {
