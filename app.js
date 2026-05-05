@@ -1,63 +1,63 @@
 const COUNTRIES = [
-      "ALG", "ARG", "AUS", "AUT", "BEL", "BIH", "BRA", "CAN", "CIV", "COD",
-  "COL", "CPV", "CRO", "CUW", "CZE", "ECU", "EGY", "ENG", "ESP", "FRA",
-  "FWC", "GER", "GHA", "HAI", "IRN", "IRQ", "JOR", "JPN", "KOR", "KSA",
-  "MAR", "MEX", "NED", "NOR", "NZL", "PAN", "PANINI", "PAR", "POR", "QAT",
-  "RSA", "SCO", "SEN", "SUI", "SWE", "TUN", "TUR", "URU", "USA", "UZB"
+  "FWC", "ALG", "ARG", "AUS", "AUT", "BEL", "BIH", "BRA", "CAN", "CIV",
+  "COD", "COL", "CPV", "CRO", "CUW", "CZE", "ECU", "EGY", "ENG", "ESP",
+  "FRA", "GER", "GHA", "HAI", "IRN", "IRQ", "JOR", "JPN", "KOR", "KSA",
+  "MAR", "MEX", "NED", "NOR", "NZL", "PAN", "PAR", "POR", "QAT", "RSA",
+  "SCO", "SEN", "SUI", "SWE", "TUN", "TUR", "URU", "USA", "UZB", "CC"
 ];
 
 const STICKERS_PER_COUNTRY = 20;
 const COUNTRY_META = {
-  NZL: { name: "Nova Zelândia", flag: "🇳🇿" },
-  EGY: { name: "Egito", flag: "🇪🇬" },
-  CPV: { name: "Cabo Verde", flag: "🇨🇻" },
-  JOR: { name: "Jordânia", flag: "🇯🇴" },
-  IRQ: { name: "Iraque", flag: "🇮🇶" },
-  HAI: { name: "Haiti", flag: "🇭🇹" },
-  CUW: { name: "Curaçau", flag: "🇨🇼" },
-  TUR: { name: "Turquia", flag: "🇹🇷" },
-  SWE: { name: "Suécia", flag: "🇸🇪" },
-  PAR: { name: "Paraguai", flag: "🇵🇾" },
-  PANINI: { name: "Panini", flag: "🏷️" },
-  CZE: { name: "República Tcheca", flag: "🇨🇿" },
-  COD: { name: "RD do Congo", flag: "🇨🇩" },
-  AUT: { name: "Áustria", flag: "🇦🇹" },
+  FWC: { name: "Diversas", flag: "🏆" },
   ALG: { name: "Argélia", flag: "🇩🇿" },
   ARG: { name: "Argentina", flag: "🇦🇷" },
   AUS: { name: "Austrália", flag: "🇦🇺" },
+  AUT: { name: "Áustria", flag: "🇦🇹" },
   BEL: { name: "Bélgica", flag: "🇧🇪" },
   BIH: { name: "Bósnia e Herzegovina", flag: "🇧🇦" },
   BRA: { name: "Brasil", flag: "🇧🇷" },
   CAN: { name: "Canadá", flag: "🇨🇦" },
   CIV: { name: "Costa do Marfim", flag: "🇨🇮" },
+  COD: { name: "Congo", flag: "🇨🇩" },
   COL: { name: "Colômbia", flag: "🇨🇴" },
+  CPV: { name: "Cabo Verde", flag: "🇨🇻" },
   CRO: { name: "Croácia", flag: "🇭🇷" },
+  CUW: { name: "Curaçau", flag: "🇨🇼" },
+  CZE: { name: "República Tcheca", flag: "🇨🇿" },
   ECU: { name: "Equador", flag: "🇪🇨" },
+  EGY: { name: "Egito", flag: "🇪🇬" },
   ENG: { name: "Inglaterra", flag: "🏴" },
   ESP: { name: "Espanha", flag: "🇪🇸" },
   FRA: { name: "França", flag: "🇫🇷" },
-  FWC: { name: "FIFA World Cup", flag: "🏆" },
   GER: { name: "Alemanha", flag: "🇩🇪" },
   GHA: { name: "Gana", flag: "🇬🇭" },
+  HAI: { name: "Haiti", flag: "🇭🇹" },
   IRN: { name: "Irã", flag: "🇮🇷" },
+  IRQ: { name: "Iraque", flag: "🇮🇶" },
+  JOR: { name: "Jordânia", flag: "🇯🇴" },
   JPN: { name: "Japão", flag: "🇯🇵" },
   KOR: { name: "Coreia do Sul", flag: "🇰🇷" },
   KSA: { name: "Arábia Saudita", flag: "🇸🇦" },
   MAR: { name: "Marrocos", flag: "🇲🇦" },
   MEX: { name: "México", flag: "🇲🇽" },
-  NED: { name: "Países Baixos", flag: "🇳🇱" },
+  NED: { name: "Holanda", flag: "🇳🇱" },
   NOR: { name: "Noruega", flag: "🇳🇴" },
+  NZL: { name: "Nova Zelândia", flag: "🇳🇿" },
   PAN: { name: "Panamá", flag: "🇵🇦" },
+  PAR: { name: "Paraguai", flag: "🇵🇾" },
   POR: { name: "Portugal", flag: "🇵🇹" },
-  QAT: { name: "Catar", flag: "🇶🇦" },
+  QAT: { name: "Qatar", flag: "🇶🇦" },
   RSA: { name: "África do Sul", flag: "🇿🇦" },
   SCO: { name: "Escócia", flag: "🏴" },
   SEN: { name: "Senegal", flag: "🇸🇳" },
   SUI: { name: "Suíça", flag: "🇨🇭" },
+  SWE: { name: "Suécia", flag: "🇸🇪" },
   TUN: { name: "Tunísia", flag: "🇹🇳" },
+  TUR: { name: "Turquia", flag: "🇹🇷" },
   URU: { name: "Uruguai", flag: "🇺🇾" },
   USA: { name: "Estados Unidos", flag: "🇺🇸" },
   UZB: { name: "Uzbequistão", flag: "🇺🇿" },
+  CC: { name: "C-COLA", flag: "🥤" },
 };
 
 function getCountryMeta(country) {
@@ -72,12 +72,15 @@ function getCountryLabel(country, includeCode = true) {
 const TOTAL_STICKERS = COUNTRIES.reduce((total, country) => total + getStickerNumbers(country).length, 0);
 
 function getStickerNumbers(country) {
-  const start = country === "PANINI" ? 0 : 1;
-  const numbers = [];
-  for (let number = start; number <= STICKERS_PER_COUNTRY; number++) {
-    numbers.push(number);
+  if (country === "FWC") {
+    return Array.from({ length: 20 }, (_, index) => index); // FWC 00 até FWC 19
   }
-  return numbers;
+
+  if (country === "CC") {
+    return Array.from({ length: 14 }, (_, index) => index + 1); // CC 01 até CC 14
+  }
+
+  return Array.from({ length: 20 }, (_, index) => index + 1); // Demais países 01 até 20
 }
 
 function isValidStickerNumber(country, number) {

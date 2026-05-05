@@ -421,3 +421,18 @@ Obrigatório:
 - Corrigida a função duplicada `formatStickerCode`, que quebrava a geração dos relatórios.
 - Os botões **Relatório álbum** e **Relatório repetidas** agora salvam diretamente o arquivo `.html`.
 - Removida a abertura em nova aba e removidos botões internos do relatório.
+
+
+## Atualização a partir do PDF ControleFigurinhas - Copa 2026
+- Estrutura do álbum ajustada conforme o PDF anexado.
+- Ordem dos códigos atualizada para seguir o controle:
+  - `FWC` / Diversas
+  - países da página 1
+  - países da página 2
+  - `CC` / C-COLA
+- Regras de numeração:
+  - `FWC 00` até `FWC 19`
+  - países: `01` até `20`
+  - `CC 01` até `CC 14`
+- Removido `PANINI` da estrutura ativa do álbum, pois não aparece no controle anexado.
+- Relatórios passam a usar a mesma estrutura do controle.
